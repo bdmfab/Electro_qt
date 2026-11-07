@@ -4,6 +4,7 @@ down the left (rows 00-24 at 0.35" pitch, row 00 centred at y = 9.45), and a
 title-block column on the right."""
 from __future__ import annotations
 import copy
+import math
 from . import model as m
 from .geometry import walk
 
@@ -105,3 +106,40 @@ def zone_of(sheet: m.Sheet, x: float, y: float) -> int:
     row = max(0, min(24, round((sheet.zone0_y - y) / sheet.row_pitch)))
     col = 1 if (sheet.col_split_x is not None and x >= sheet.col_split_x) else 0
     return row + 25 * col
+
+
+TITLE_BLOCK_MM = 0.7        # twice the default line (1.5 px = 0.33 mm on screen)
+
+
+def _border_box(sheet):
+    """(left, bottom, right, top) of the drawing-area border: the four long lines left of the title block."""
+    x0 = sheet.width - 2.0
+    long_ = [e for e in sheet.frame if isinstance(e, m.Line) and min(e.x1, e.x2) < x0
+             and math.hypot(e.x2 - e.x1, e.y2 - e.y1) > 1.0]
+    if not long_:
+        return None
+    xs = [v for e in long_ for v in (e.x1, e.x2)]; ys = [v for e in long_ for v in (e.y1, e.y2)]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def display_frame(sheet: m.Sheet) -> list:
+    """The sheet's frame as it is drawn: the border and the title block (the column on the right, the
+    last 2 units of the sheet) at double weight. Copies; the stored frame is not changed."""
+    x0 = sheet.width - 2.0
+    box = _border_box(sheet)
+
+    def on_box(x, y, t=1e-3):
+        L, B, R, T = box
+        return (abs(x - L) < t or abs(x - R) < t or abs(y - B) < t or abs(y - T) < t) \
+            and L - t <= x <= R + t and B - t <= y <= T + t
+
+    out = []
+    for e in sheet.frame:
+        inside = (isinstance(e, m.Line) and min(e.x1, e.x2) >= x0) or (isinstance(e, m.Arc) and e.cx >= x0)
+        border = box is not None and isinstance(e, m.Line) and on_box(e.x1, e.y1) and on_box(e.x2, e.y2)
+        if (inside or border) and e.style.width <= 0:
+            e = copy.copy(e)
+            e.style = copy.copy(e.style)
+            e.style.width = TITLE_BLOCK_MM
+        out.append(e)
+    return out

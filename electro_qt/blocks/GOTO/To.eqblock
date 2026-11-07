@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="To" description="Off-page connector to" part_number="" tag_prefix="" hyperlink="" manufacturer="" increment="0" connector="1" prefix_rule="" poles="1" label_pos="right" folder="GOTO" terminal_text_editable="0">
+  <entities>
+    <line x1="0" y1="0" x2="-0.12" y2="0.1" id="7efd1bc8-d573-4f06-8af1-628781b4d525" layer="0" />
+    <line x1="-0.12" y1="0.1" x2="-0.5" y2="0.1" id="6d51c50f-47e4-424f-9052-78fa135bd14a" layer="0" />
+    <line x1="-0.5" y1="0.1" x2="-0.5" y2="-0.1" id="fcf252e8-370f-4993-93d6-238ad4f8546c" layer="0" />
+    <line x1="-0.5" y1="-0.1" x2="-0.12" y2="-0.1" id="c7cdfc20-a25d-4ae1-8694-5cce0365a0f6" layer="0" />
+    <line x1="-0.12" y1="-0.1" x2="0" y2="0" id="29d67f9b-e7b8-4c01-bdc3-22ffaf5abe19" layer="0" />
+  </entities>
+  <slot terminal="" x="0" y="0" num_dx="0.0" num_dy="0.0" />
+</block>

@@ -162,3 +162,59 @@ A placed block now counts with its real extent (graphics + slots, rotated / mirr
 - **Duplicate numbers:** Update wire numbers lists numbers used by more than one wire and asks whether to apply a goto. Wires are taken two at a time (sheet / position order): the first pair is a set, NUMBER-1 on both ends, the next pair NUMBER-2 ... A leftover wire gets its own number. Gotos are never reported as duplicates.
 - **Wire number dialog:** `Ignore` is gone (Clear remains). New **Goto**: pick another numbered wire from a list; both wires become NUMBER-1 (the first set of that number); tying another pair to the same number makes NUMBER-2 on both ends. Picking a wire that is already in a set joins that set. Works on any sheet, as undoable edits.
 - The border and title block ignore the mouse: no hover colour, nothing to select or delete.
+
+## 0.11.0 - Rich multiline text
+- The Text tool (and double-click on a text) opens an editor with **B / I / U**, **size** and **colour** per selection (Ctrl+B / I / U work).
+- Size is relative to the text height (12 pt = normal). Colour "Default" follows the text's own colour.
+- Field codes such as `{page}` and `{tag}` still work inside formatted text.
+- Plain text stays plain; formatting is stored as light markup (`<b> <i> <u> <size=> <color=>`) with a `rich` flag.
+
+## 0.11.1 - GOTO reworked
+- A goto no longer renames wire numbers. Applying one (Update numbers > duplicates > Yes, or Wire number > Goto) places a **From** connector on one wire and a **To** connector on the other, both named `NUMBER-1` (the next set `NUMBER-2` ...).
+- Blocks go on a free end of each wire (From where the wire leaves to the right, To where it arrives from the left), turned to suit. A wire with no free end is reported; place those by hand.
+- Wire menu > Goto: this wire gets the From, the picked wire the To, and this wire takes the picked wire's number.
+- Sets tied by a connector named `NUMBER-k` are not reported as duplicates.
+
+## 0.11.2 - Goto direction
+- Wire number > Goto: the selected wire is the **To** end, the picked wire the **From** end (the selected wire takes the From wire's number).
+- If the picked From wire already has a From connector, its name is reused and only a To is added, so one From can feed several Tos (all named `NUMBER-k`).
+
+## 0.12.0 - DXF export
+- Export > DXF - this sheet / all sheets (one file per sheet, `name_NN.dxf`). Needs `pip install ezdxf`.
+- Parts are real DXF **blocks** (BLOCK + INSERT, rotation and mirror kept). Each INSERT carries attributes: TAG, DESCRIPTION, PART_NUMBER, MANUFACTURER, XREF, TERM1..n (terminal names) and the block's own data fields. The stacked label (tag / description / part label / xref) is visible; the rest are invisible attributes.
+- Layers keep colour, linetype and lineweight. Plain text becomes TEXT; multi-line and rich text become MTEXT with bold / italic / underline / size / colour. Filled dots become hatches. Wire numbers are text on the layer WIRE_NUMBERS. The sheet frame and title block are included.
+- Not exported: logo image, bundles, slot marks, field codes inside a block's own static text.
+- The off-page **From** block now shows its cross-reference to the right of the arrow (new From blocks; delete the old one from the library folder GOTO to get the new one).
+
+## 0.12.1
+- Library > Add off-page connector block now offers to **replace** an existing From / To with the current default (this is how the From label moves to the right; placed ones update).
+- A failed DXF export shows the error type and a Details box with the full trace.
+
+## 0.12.2
+- Fixed Export > DXF doing nothing (it called the current sheet wrongly).
+- Fixed a hover-highlight error after deleting an item.
+
+## 0.13.0 - PDF export, export folders and names
+- Export > **PDF - all sheets**: writes `pdf/<tab name>.pdf` for every sheet (e.g. `pdf/01 Power Main.pdf`) plus one merged file `pdf/<Job>.pdf` (Job from Sheet > Title / project info; the project file name if blank). **PDF - this sheet** writes just that sheet's file.
+- Export > **DXF** now follows the same scheme: `dxf/<tab name>.dxf`, no file dialog. Both folders are created next to the project file; the project must be saved first (you are asked).
+- PDFs are vector, black on white, without grid or editing marks; hops, junction dots, wire numbers, rich text and the title block are included. Sheets of different sizes keep their own page size in the merged file.
+
+## 0.13.1
+- DXF export: layer names that differ only in upper / lower case (e.g. Dashed and DASHED) no longer stop the export; they are one DXF layer.
+
+## 0.13.2
+- The title block (the right-hand column) is drawn at double line weight on screen, in PDF and in DXF. Works on existing projects too (nothing stored changes); border and zone markers are unchanged.
+
+## 0.14.0 - Rule check, heavier border
+- The border now has the same (double) line weight as the title block; the zone markers stay light.
+- **Sheet > Rule check...** lists probable mistakes and changes nothing: duplicate tags (a coil and its linked contacts are fine), parts that should have a tag but have none, slots with no wire, wires no marked wire reaches, duplicate wire numbers (goto sets are fine), broken tag links, and off-page connectors that appear only once.
+- The list stays open while you fix things: double-click a line to jump to the sheet and spot, "Check again" refreshes, a filter picks one category, Export CSV saves the list.
+
+## 0.15.0
+- Layers added automatically for a block that brought no layer definition are now named-aware: a layer called "Dashed" is dashed, one with "Gray"/"Grey" in its name is gray (color 8).
+- **Q** marks the selected wire (or the wire under the cursor) in the Select tool; same as right-click > Mark wire.
+- Every export ends with a verification window listing the files written (size, folder, Open folder button): PDF, DXF, wire list, wire labels (how many labels, two per wire) and BOM.
+- BOM: off-page connectors are no longer listed; the window warns when Part Number is blank, naming the parts.
+
+## 0.15.1
+- The text editor has **Justify L / C / R** buttons. The choice applies to the whole text (its point is the left edge, middle or right edge) and is kept when you edit a text later; new texts start with the text style's justification.

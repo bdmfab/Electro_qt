@@ -77,7 +77,11 @@ def snap_points(e):
 def text_extent(t: m.Text):
     """Approximate box of a text object (the real glyph metrics live in Qt, so
     this estimates: ~0.7 x height per character, 1.6 x height per line)."""
-    lines = ("" if getattr(t, "hidden", False) else (t.resolved or t.source)).split("\n")
+    txt = "" if getattr(t, "hidden", False) else (t.resolved or t.source)
+    if getattr(t, "rich", False):
+        from .richtext import plain
+        txt = plain(txt)
+    lines = txt.split("\n")
     w = max((len(s) for s in lines), default=1) * 0.7 * t.height
     h = t.height
     x0, y1 = t.x, t.y + h

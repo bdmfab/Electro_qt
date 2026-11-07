@@ -74,7 +74,7 @@ def bom(project):
             if not isinstance(r, m.BlockRef):
                 continue
             blk = project.blocks.get(r.block)
-            if blk is None:
+            if blk is None or blk.connector:                 # off-page connectors are not parts
                 continue
             pn = r.props.get("part_number", blk.part_number)
             mf = r.props.get("manufacturer", blk.manufacturer)
@@ -90,6 +90,11 @@ def bom(project):
         tags = sorted(t for t in g["tags"] if t)
         rows.append([i, len(g["tags"]), pn, mf, ds, name, ", ".join(tags)] + [g["data"].get(k, "") for k in keys])
     return header, rows
+
+
+def bom_missing_part_numbers(rows):
+    """[(block name, quantity, tags)] BOM rows without a part number."""
+    return [(r[5], r[1], r[6]) for r in rows if not str(r[2]).strip()]
 
 
 def write_csv(path, header, rows):

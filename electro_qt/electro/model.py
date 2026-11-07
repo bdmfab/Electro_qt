@@ -83,6 +83,7 @@ class Text:
     font: str = ""                           # family; "" = application default
     align: str = "left"                      # left | center | right of the anchor point
     tstyle: str = "Default"                  # name of a TextStyle (values are copied in)
+    rich: bool = False                       # source holds richtext markup (<b> <i> <u> <size=> <color=>)
     TAG = "text"
 
 

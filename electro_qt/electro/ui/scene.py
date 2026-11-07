@@ -19,6 +19,7 @@ from .. import numbering as nb
 from .. import junctions as jn
 from ..snap import snap_to_grid
 from .. import fields
+from ..templates import display_frame
 from . import clipboard
 from ..snap import snap, SnapSettings
 from .items import build_item, THEME, make_pen, aci_color
@@ -56,9 +57,11 @@ class EditorScene(QGraphicsScene):
     def __init__(self, project: m.Project, sheet: m.Sheet, parent=None):
         super().__init__(parent)
         self.project, self.sheet = project, sheet
+        self.apply_goto = None           # set by the main window: place From / To connectors
         self.scene_for_page = None       # set by the main window: page -> that sheet's scene
         self.block_edit = None          # {"name": ...} when this tab is editing a block's geometry
         self.undo = QUndoStack(self)
+        self.printing = False            # PDF export: white page, no grid, no editing marks
         self._label_items = []
         self.undo.indexChanged.connect(lambda _i: (self.refresh_wire_labels(), self.update()))
         self.snap_settings = SnapSettings(origin=(sheet.grid_x0, sheet.zone0_y))
@@ -145,7 +148,7 @@ class EditorScene(QGraphicsScene):
         fields.refresh_project(self.project)         # {job}, {page}, ... in text
         self.clear(); self._items.clear()
         self.setSceneRect(-5, -5, self.sheet.width + 10, self.sheet.height + 10)
-        for e in self.sheet.frame:                   # border, zone markers, title block
+        for e in display_frame(self.sheet):          # border, zone markers, title block (title block heavier)
             it = build_item(e, self.layers, self._ref)
             if it is None:
                 continue
@@ -560,7 +563,7 @@ class EditorScene(QGraphicsScene):
             acts[menu.addAction("Resize")] = lambda g=groups[0]: self.start_resize(g)
         wires = self._selected_wires()
         if wires:
-            acts[menu.addAction("Mark wire (start numbering here)...")] = self.mark_wire
+            acts[menu.addAction("Mark wire (start numbering here)...\tQ")] = self.mark_wire
             if any(w.mark != "" for w in wires):
                 acts[menu.addAction("Clear wire mark")] = self.clear_mark
         if self._selected_any_wires():
@@ -784,14 +787,18 @@ class EditorScene(QGraphicsScene):
         self._select_entities(add)
         self.say("Exploded. Edit it, then Make block to save it again")
 
-    def place_block(self, name, pt, rot=0.0, mirror=False):
-        """Drop a block; wires that run through its slots are trimmed to them."""
+    def place_block(self, name, pt, rot=0.0, mirror=False, tag=None):
+        """Drop a block; wires that run through its slots are trimmed to them. `tag` names an
+        off-page connector without asking."""
         blk = self.project.blocks[name]
         if bk.ensure_layers(self.project, blk):          # the block brings its layers (dashed ...) along
             self.layers_changed.emit()
         ref = m.BlockRef(name, pt[0], pt[1], rot, mirror, style=m.Style("0"))
         ref.tag = bk.assign_tag(self.project, blk, self.sheet, pt[0], pt[1])
-        if blk.connector:                       # off-page connector: its name joins it to the other sheet
+        if blk.connector and tag is not None:
+            ref.tag = tag
+            ref.props["tag_mode"] = "manual"
+        elif blk.connector:                     # off-page connector: its name joins it to the other sheet
             text, ok = QInputDialog.getText(QApplication.activeWindow(), "Off-page connector",
                                             "Connector name (use the same name on the other sheet):",
                                             text=getattr(self, "last_conn", ""))
@@ -881,10 +888,9 @@ class EditorScene(QGraphicsScene):
             plan = nb.goto_plan(self.project, mine, link)
             if plan is None:
                 return
-            for pg, lines, num in plan:
-                sc = self if pg == self.sheet.page else (self.scene_for_page(pg) if self.scene_for_page else None)
-                if sc is not None:
-                    sc.undo.push(EditCmd(sc, "Goto", modify=[(l, {"number": num}) for l in lines]))
+            name, frm, to, val = plan
+            if self.apply_goto:
+                self.apply_goto([(name, frm, to)], numbers={id(to[1]): val})
             return
         ids = {id(w) for w in wires}
         mods = []
@@ -1007,7 +1013,11 @@ class EditorScene(QGraphicsScene):
 
     def _paint_hover(self, p, vs):
         it = getattr(self, "hover_item", None)
-        if it is None or it.scene() is not self:
+        try:
+            if it is None or it.scene() is not self:
+                return
+        except RuntimeError:                     # the item was deleted since the last mouse move
+            self.hover_item = None
             return
         mag = QColor(255, 0, 255)
         pen = QPen(mag, 2.5); pen.setCosmetic(True)
@@ -1127,18 +1137,29 @@ class EditorScene(QGraphicsScene):
         super().mouseDoubleClickEvent(ev)
 
     def edit_text(self, e: m.Text):
-        txt, ok = QInputDialog.getMultiLineText(QApplication.activeWindow(), "Edit text", "Text:", e.source)
-        if ok and txt != e.source:
-            class Edit(QUndoCommand):
-                def __init__(s, scene, ent, new):
-                    super().__init__("Edit text"); s.sc, s.e, s.new, s.old = scene, ent, new, ent.source
-                def _set(s, v):
-                    s.e.source = v
-                    s.e.resolved = fields.resolve(v, fields.context(s.sc.project, s.sc.sheet))
-                    s.sc.sync_refresh(s.e)
-                def redo(s): s._set(s.new)
-                def undo(s): s._set(s.old)
-            self.undo.push(Edit(self, e, txt))
+        from .textdlg import RichTextDialog
+        dlg = RichTextDialog(QApplication.activeWindow(), e.source, getattr(e, "rich", False), "Edit text", e.align)
+        if not dlg.exec():
+            return
+        txt, rich = dlg.result_markup()
+        if txt == e.source and rich == e.rich and dlg.align == e.align:
+            return
+        align = dlg.align
+
+        class Edit(QUndoCommand):
+            def __init__(s, scene, ent, new, nrich, nalign):
+                super().__init__("Edit text")
+                s.sc, s.e, s.new, s.nrich, s.old, s.orich = scene, ent, new, nrich, ent.source, ent.rich
+                s.nal, s.oal = nalign, ent.align
+
+            def _set(s, v, r, al):
+                s.e.source, s.e.rich, s.e.align = v, r, al
+                s.e.resolved = fields.resolve(v, fields.context(s.sc.project, s.sc.sheet))
+                s.sc.sync_refresh(s.e)
+
+            def redo(s): s._set(s.new, s.nrich, s.nal)
+            def undo(s): s._set(s.old, s.orich, s.oal)
+        self.undo.push(Edit(self, e, txt, rich, align))
 
     def keyPressEvent(self, ev):
         k = ev.key()
@@ -1153,6 +1174,19 @@ class EditorScene(QGraphicsScene):
             ev.accept(); return
         if self.tool.name != "select" and self.tool.key(ev):
             self.prompt.emit(self.tool.hint()); self.update(); ev.accept(); return
+        if k == Qt.Key.Key_Q and self.tool.name == "select" and not ev.modifiers():
+            if not self._selected_wires():               # no wire selected: take the one under the cursor
+                it = getattr(self, "hover_item", None)
+                try:
+                    if it is not None and it.scene() is self:
+                        self.clearSelection(); it.setSelected(True)
+                except RuntimeError:
+                    pass
+            if self._selected_wires():
+                self.mark_wire()
+            else:
+                self.say("Q: select a numbered wire (or hover over it) to mark it")
+            ev.accept(); return
         if enter:
             if self.tool.name == "select":
                 self.repeat_last()                 # Space/Enter = repeat last command
@@ -1164,6 +1198,8 @@ class EditorScene(QGraphicsScene):
     # ------------------------------------------------------------ drawing
     def drawBackground(self, p, rect):
         p.fillRect(rect, self.bg)
+        if self.printing:
+            return
         fg = QColor("#000000") if THEME["light"] else QColor("#ffffff")
         GRID_MINOR, GRID_MAJOR = _mix(self.bg, fg, 0.07), _mix(self.bg, fg, 0.15)
         s = self.view_scale
@@ -1189,6 +1225,9 @@ class EditorScene(QGraphicsScene):
 
     def drawForeground(self, p, rect):
         vs = self.view_scale
+        if self.printing:
+            self._paint_hops(p, vs)
+            return
         if self.tool is not None:
             self._paint_hops(p, vs)
             self._paint_hover(p, vs)

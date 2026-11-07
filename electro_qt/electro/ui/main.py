@@ -110,9 +110,11 @@ class MainWindow(QMainWindow):
         added = []
         for kind in ("from", "to"):
             blk = bk.default_connector_block(kind)
-            if blk.name in self.store.blocks:
-                continue
-            self.project.blocks.setdefault(blk.name, copy.deepcopy(blk))
+            if blk.name in self.store.blocks or blk.name in self.project.blocks:
+                if QMessageBox.question(self, "Connector blocks", f"'{blk.name}' already exists. Replace it with the current "
+                                        "default (placed ones keep their names and update)?") != QMessageBox.StandardButton.Yes:
+                    continue
+            self.project.blocks[blk.name] = copy.deepcopy(blk)
             try:
                 self.store.new_folder(blk.folder)
                 self.store.save_block(blk)
@@ -120,6 +122,8 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Library", f"Could not write the library file:\n{ex}"); return
             added.append(blk.name)
         self._dirty_library()
+        if added:
+            self._refresh_all()
         self.statusBar().showMessage(
             ("Added " + " and ".join(added) + " to the library folder GOTO. Place From / To at the ends of the wire "
              "on each sheet, giving both the same name.") if added else "From and To are already in the library.", 10000)
@@ -140,7 +144,8 @@ class MainWindow(QMainWindow):
         return [self.tabs.widget(i).scene() for i in range(self.tabs.count())]
 
     def _tab_label(self, sheet):
-        return f"{sheet.page:02d}  {sheet.title}".rstrip()
+        from ..exportnames import tab_label
+        return tab_label(sheet)
 
     def _add_tab(self, sheet):
         sc = EditorScene(self.project, sheet)
@@ -154,6 +159,7 @@ class MainWindow(QMainWindow):
         sc.block_made.connect(self._block_made)
         sc.edit_block_requested.connect(self.on_edit_block_geometry)
         sc.undo.indexChanged.connect(lambda _i: self._refresh_xrefs())
+        sc.apply_goto = self.apply_goto
         sc.scene_for_page = lambda pg: next((x for x in self._sheet_scenes() if x.sheet.page == pg), None)
         sc.folder_choices = list(self.store.folders)
         sc.undo.cleanChanged.connect(self._title)
@@ -221,6 +227,12 @@ class MainWindow(QMainWindow):
         ex.addAction(self._act("&Wire list (CSV)...", lambda: self.on_export("wires")))
         ex.addAction(self._act("Wire &labels (CSV)...", lambda: self.on_export("labels")))
         ex.addAction(self._act("&Bill of materials (CSV)...", lambda: self.on_export("bom")))
+        ex.addSeparator()
+        ex.addAction(self._act("PDF - &all sheets (one per tab + job file)", lambda: self.on_export_pdf(True)))
+        ex.addAction(self._act("PDF - this &sheet", lambda: self.on_export_pdf(False)))
+        ex.addSeparator()
+        ex.addAction(self._act("&DXF - all sheets (one file per tab)", lambda: self.on_export_dxf(True)))
+        ex.addAction(self._act("DXF - &this sheet", lambda: self.on_export_dxf(False)))
         fm.addSeparator()
         fm.addAction(self._act("&Quit", self.close, S.Quit))
 
@@ -254,6 +266,7 @@ class MainWindow(QMainWindow):
         sm.addAction(self._act("&Letter rules...", self.on_letter_rules))
         sm.addAction(self._act("Update &wire numbers", self.on_update_numbers, "F5"))
         sm.addAction(self._act("Update device &tags...", self.on_update_tags))
+        sm.addAction(self._act("&Rule check...", self.on_rule_check))
         sm.addSeparator()
         sm.addAction(self._act("&Title block...", self.on_title_block))
         sm.addAction(self._act("Title block &image...", self.on_logo))
@@ -852,6 +865,96 @@ class MainWindow(QMainWindow):
         except OSError as e:
             QMessageBox.warning(self, title, f"Could not write the file:\n{e}"); return
         self.statusBar().showMessage(f"{title}: {len(rows)} row(s) written to {path}", 8000)
+        from .resultdlg import ExportResultDialog
+        warn = []
+        if kind == "bom":
+            parts = sum(int(r[1]) for r in rows)
+            summary = f"Bill of materials: {len(rows)} line(s), {parts} part(s). Off-page connectors are not listed."
+            missing = reports.bom_missing_part_numbers(rows)
+            if missing:
+                n = sum(int(q) for _, q, _ in missing)
+                warn.append(f"Part Number is blank for {n} part(s) on {len(missing)} line(s):")
+                warn += [f"   {name} x{q}" + (f"  ({tags})" if tags else "") for name, q, tags in missing[:15]]
+                if len(missing) > 15:
+                    warn.append(f"   ... and {len(missing) - 15} more line(s)")
+        elif kind == "labels":
+            summary = f"Wire labels: {len(rows)} label(s) generated for {len(rows) // 2} wire(s) (two per wire)."
+        else:
+            summary = f"Wire list: {len(rows)} wire(s)."
+        ExportResultDialog(self, f"{title} exported", [path], summary, warn).exec()
+
+    def _export_target(self, kind):
+        """Folder for exports (next to the project file), asking to save the project first."""
+        from .. import exportnames
+        if not getattr(self, "path", None):
+            QMessageBox.information(self, "Export", f"Save the project first: the {kind} folder is created next to it.")
+            self.on_save_as()
+            if not getattr(self, "path", None):
+                return None
+        return exportnames.export_folder(self.path, kind)
+
+    def on_export_dxf(self, every):
+        """Drawings as DXF into <project folder>/dxf, one file per sheet named after its tab. Parts become
+        DXF blocks (INSERT) carrying TAG / DESCRIPTION / PART_NUMBER / MANUFACTURER / XREF / terminal attributes."""
+        from .. import dxfexport
+        try:
+            import ezdxf  # noqa: F401
+        except ImportError:
+            QMessageBox.warning(self, "DXF export", "DXF export needs the ezdxf package:\n\n    pip install ezdxf")
+            return
+        sc = self.scene_
+        if not every and (sc is None or sc.block_edit):
+            QMessageBox.information(self, "DXF export", "Open a sheet first."); return
+        folder = self._export_target("dxf")
+        if not folder:
+            return
+        try:
+            nb.update(self.project)
+            pages = sorted(self.project.sheets) if every else [sc.sheet.page]
+            paths = dxfexport.export_project(self.project, folder, sheets=pages)
+        except Exception as e:                           # noqa: BLE001 - show whatever ezdxf / the disk says
+            import traceback
+            box = QMessageBox(QMessageBox.Icon.Warning, "DXF export", f"Could not write the DXF:\n{type(e).__name__}: {e}", parent=self)
+            box.setDetailedText(traceback.format_exc())
+            box.exec(); return
+        self.statusBar().showMessage(f"DXF: {len(paths)} file(s) written to {folder}", 10000)
+        from .resultdlg import ExportResultDialog
+        ExportResultDialog(self, "DXF export", paths, f"DXF: {len(paths)} file(s) written, one per sheet.").exec()
+
+    def on_export_pdf(self, every):
+        """PDF into <project folder>/pdf: one file per sheet named after its tab, plus (all sheets) one merged
+        file named after the job."""
+        from .. import exportnames
+        from .pdfexport import write_pdf
+        sc = self.scene_
+        if not every and (sc is None or sc.block_edit):
+            QMessageBox.information(self, "PDF export", "Open a sheet first."); return
+        folder = self._export_target("pdf")
+        if not folder:
+            return
+        try:
+            os.makedirs(folder, exist_ok=True)
+            nb.update(self.project)
+            pages = sorted(self.project.sheets) if every else [sc.sheet.page]
+            sheets = [self.project.sheets[p] for p in pages]
+            written = []
+            for sh in sheets:
+                path = os.path.join(folder, exportnames.sheet_stem(sh) + ".pdf")
+                write_pdf(path, self.project, [sh], exportnames.tab_label(sh)); written.append(path)
+            if every and len(sheets) > 1:
+                job = exportnames.job_stem(self.project, self.path)
+                path = os.path.join(folder, job + ".pdf")
+                write_pdf(path, self.project, sheets, job); written.append(path)
+        except Exception as e:                           # noqa: BLE001
+            import traceback
+            box = QMessageBox(QMessageBox.Icon.Warning, "PDF export", f"Could not write the PDF:\n{type(e).__name__}: {e}", parent=self)
+            box.setDetailedText(traceback.format_exc())
+            box.exec(); return
+        self.statusBar().showMessage(f"PDF: {len(written)} file(s) written to {folder}", 10000)
+        from .resultdlg import ExportResultDialog
+        n = len(sheets)
+        ExportResultDialog(self, "PDF export", written, f"PDF: {len(written)} file(s) written ({n} sheet file(s)" +
+                           (", plus the merged job file)." if every and n > 1 else ").")).exec()
 
     def on_letter_rules(self):
         from .ruledlg import RulesDialog
@@ -880,10 +983,10 @@ class MainWindow(QMainWindow):
                                      "These numbers are used by more than one wire:\n\n" + "\n".join(lines[:20])
                                      + ("\n..." if len(lines) > 20 else "")
                                      + "\n\nApply a goto? Wires are taken two at a time (sheet / position order): the first pair "
-                                       "becomes NUMBER-1 on both ends, the next pair NUMBER-2 ... Gotos are no longer "
-                                       "reported as duplicates.")
+                                       "gets a From and a To connector named NUMBER-1, the next pair NUMBER-2 ... The wire "
+                                       "numbers are not changed. Wires tied by connectors are not duplicates.")
             if r == QMessageBox.StandardButton.Yes:
-                self.apply_number_plan(nb.goto_duplicates(self.project, rep.duplicates), "Apply goto")
+                self.apply_goto(nb.goto_duplicates(self.project, rep.duplicates))
                 warnings = [w for w in warnings if not w.startswith("Number ")]
         if warnings:
             QMessageBox.warning(self, "Wire number warnings", "\n".join(warnings[:30])
@@ -893,6 +996,46 @@ class MainWindow(QMainWindow):
                                     "No numbered wire lines were found. Wires must be on a wire layer with "
                                     "'numbered' ticked (Layers...), and a wire must be marked: right-click > Mark wire.")
 
+    def apply_goto(self, pairs, numbers=None):
+        """pairs = [(name, (page, Net) for the From or None, (page, Net) for the To)]: a From and a To
+        connector block, both called `name`, go on a free end of each wire. numbers = {id(net): value}
+        also gives that wire the number."""
+        if not pairs:
+            return
+        for kind in ("from", "to"):                      # make sure the two blocks exist
+            blk = bk.default_connector_block(kind)
+            if blk.name not in self.project.blocks:
+                import copy
+                self.project.blocks[blk.name] = copy.deepcopy(blk)
+                if blk.name not in self.store.blocks:
+                    try:
+                        self.store.new_folder(blk.folder)
+                        self.store.save_block(blk)
+                        self._dirty_library()
+                    except OSError:
+                        pass
+        placed, problems = 0, []
+        for name, a, b in pairs:
+            put, bad = nb.goto_connectors(self.project, a, b, name)
+            problems += bad
+            if len(put) < (1 if a is None else 2):
+                continue
+            for pg, kind, pt, rot, nm in put:
+                sc = next((x for x in self._sheet_scenes() if x.sheet.page == pg), None)
+                if sc is not None:
+                    sc.place_block(kind, pt, rot, False, tag=nm)
+                    placed += 1
+            if numbers and id(b[1]) in numbers:
+                sc = next((x for x in self._sheet_scenes() if x.sheet.page == b[0]), None)
+                if sc is not None:
+                    sc.undo.push(EditCmd(sc, "Goto number", modify=[(l, {"number": m.WireNumber("override", numbers[id(b[1])])})
+                                                                     for l in b[1].lines]))
+        self._refresh_xrefs()
+        self.statusBar().showMessage(f"Goto: {placed} connector(s) placed", 8000)
+        if problems:
+            QMessageBox.warning(self, "Goto", "\n".join(problems[:20]) + "\n\nPlace those connectors by hand "
+                                "(Library > GOTO), giving both the same name.")
+
     def apply_number_plan(self, plan, label):
         """plan = [(page, lines, WireNumber)] -> undoable edits on each sheet's own scene."""
         per = {}
@@ -901,6 +1044,35 @@ class MainWindow(QMainWindow):
         for sc in self._sheet_scenes():
             if sc.sheet.page in per:
                 sc.undo.push(EditCmd(sc, label, modify=per[sc.sheet.page]))
+
+    def on_rule_check(self):
+        from .. import rules, reports
+        from .checkdlg import RuleCheckDialog
+
+        def goto(page, x, y):
+            for i in range(self.tabs.count()):
+                v = self.tabs.widget(i)
+                sc = v.scene() if v is not None else None
+                if sc is not None and not sc.block_edit and sc.sheet.page == page:
+                    self.tabs.setCurrentIndex(i)
+                    v.centerOn(x, y)
+                    return
+
+        def export(issues):
+            from PySide6.QtWidgets import QFileDialog
+            base = os.path.splitext(self.path)[0] if getattr(self, "path", None) else "rule_check"
+            path, _ = QFileDialog.getSaveFileName(self, "Export rule check", f"{base}_rule_check.csv", "CSV (*.csv)")
+            if path:
+                try:
+                    reports.write_csv(path, rules.HEADER, rules.as_rows(issues))
+                except OSError as e:
+                    QMessageBox.warning(self, "Rule check", f"Could not write the file:\n{e}")
+
+        old = getattr(self, "_check_dlg", None)
+        if old is not None:
+            old.close()
+        self._check_dlg = RuleCheckDialog(self, lambda: rules.check(self.project), goto, export)
+        self._check_dlg.show()
 
     def on_update_tags(self):
         r = QMessageBox.question(self, "Update device tags",

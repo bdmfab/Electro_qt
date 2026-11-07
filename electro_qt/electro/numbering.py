@@ -23,6 +23,7 @@ import re
 from dataclasses import dataclass, field
 from . import model as m
 from .blocks import block_slots
+from .geometry import leaves
 from .templates import zone_of
 
 TOL = 1e-4
@@ -288,11 +289,12 @@ class Report:
     changes: dict = field(default_factory=dict)     # sheet page -> [(line, WireNumber)]
     warnings: list = field(default_factory=list)
     duplicates: list = field(default_factory=list)   # [(number, [(page, Net), ...])] genuine repeats
+    unreached: list = field(default_factory=list)    # [(page, (x, y))] wires no marked wire reaches
     numbered: int = 0
     nets: int = 0
 
 
-def connector_groups(project, sheets_nets):
+def connector_groups(project, sheets_nets, names=None):
     """[[Net, ...]] nets joined through off-page connectors (blocks flagged `connector` that
     share a tag), page order. sheets_nets = {page: nets}."""
     byname = {}
@@ -307,7 +309,13 @@ def connector_groups(project, sheets_nets):
             n = _net_at(sheets_nets[pg], block_slots(blk, r)[0][1])
             if n is not None and n not in byname.setdefault(r.tag, []):
                 byname[r.tag].append(n)
-    return [g for g in byname.values() if len(g) > 1]
+    out = []
+    for tag, g in byname.items():
+        if len(g) > 1:
+            out.append(g)
+            if names is not None:
+                names.append(tag)
+    return out
 
 
 def update(project) -> Report:
@@ -323,7 +331,8 @@ def update(project) -> Report:
         for n in nets:
             n.page = pg
         data[pg] = (nets, block_links(project, project.sheets[pg], nets))
-    groups = connector_groups(project, {pg: data[pg][0] for pg in pages})
+    group_names = []
+    groups = connector_groups(project, {pg: data[pg][0] for pg in pages}, group_names)
     group_of = {id(n): gi for gi, g in enumerate(groups) for n in g}
 
     # ---- incident counting, across sheets
@@ -394,6 +403,7 @@ def update(project) -> Report:
             else:
                 rep.warnings.append(f"Sheet {pg:02d}: a wire near x={n.anchor[0]:.2f}, "
                                     f"zone {zone_of(sh, *n.anchor):02d} is not reached from any marked wire")
+                rep.unreached.append((pg, n.anchor))
                 n.numbered = False
                 continue
             if gid is not None and n.value and (gid not in first_value or n.fixed):
@@ -421,10 +431,15 @@ def update(project) -> Report:
                 rep.changes.setdefault(pg, []).extend(new)
             rep.numbered += 1
             seen.setdefault(n.value, []).append((pg, n))
+    group_names_by_id = {gi: group_names[gi] for gi in range(len(groups))}
     for val, lst in sorted(seen.items()):
         distinct = {group_of.get(id(n), id(n)) for _, n in lst}
         if all(n.fixed and n.mode == "goto" for _, n in lst):
-            continue                                     # wires tied together with a goto: not a duplicate
+            continue                                     # (old files) wires tied with a goto-mode number
+        tied = {g for g in distinct if g in group_names_by_id and goto_names(group_names_by_id[g])[0] == val
+                and goto_names(group_names_by_id[g])[1]}
+        distinct -= tied                                 # sets tied by a From / To named NUMBER-k are not duplicates
+        lst = [(pg, n) for pg, n in lst if group_of.get(id(n), id(n)) not in tied]
         if len(distinct) > 1 and val:
             rep.duplicates.append((val, sorted(lst, key=lambda t: (t[0], t[1].anchor[0], -t[1].anchor[1]))))
             where = ", ".join(f"{pg:02d}/{zone_of(project.sheets[pg], *n.anchor):02d}" for pg, n in lst)
@@ -464,52 +479,117 @@ def goto_names(value, taken_values=()):
     return (mt.group(1), int(mt.group(2))) if mt else (value, 0)
 
 
-def _next_goto(project, base):
-    """Next free set number for a base number: after the highest NUMBER-k already used."""
-    return 1 + max([goto_names(v)[1] for _, _, v in numbered_nets(project) if goto_names(v)[0] == base] + [0])
+def next_connector_name(project, base, taken=()):
+    """BASE-k for the next free set: after the highest BASE-k on a placed connector block
+    (or already handed out in `taken`)."""
+    ks = [goto_names(t)[1] for t in taken if goto_names(t)[0] == base]
+    for sh in project.sheets.values():
+        for e in leaves(sh.entities):
+            if isinstance(e, m.BlockRef):
+                blk = project.blocks.get(e.block)
+                if blk is not None and blk.connector and goto_names(e.tag)[0] == base:
+                    ks.append(goto_names(e.tag)[1])
+    return f"{base}-{max(ks + [0]) + 1}"
 
 
-def goto_plan(project, this_line_ids, other_line_id):
-    """Tie two wires together with a goto: a set. Both ends take the picked wire's number with
-    -k added, k = 1 for the first set of that number, 2 for the next set ... If the picked wire
-    is already in a set, this wire joins it (same NUMBER-k). -> [(page, [lines], WireNumber)]
-    or None when the picked wire has no number."""
+def free_ends(project, page, net, tol=1e-4):
+    """[(point, outward_direction)] ends of a wire that touch nothing: no other line of the net
+    and no slot of a placed part. Outward points away from the wire."""
+    from . import blocks as bk
+    sh = project.sheets[page]
+    taken = []
+    for e in leaves(sh.entities):
+        if isinstance(e, m.BlockRef):
+            blk = project.blocks.get(e.block)
+            if blk is not None:
+                taken += [w for _, w in bk.block_slots(blk, e)]
+    ends = []
+    for l in net.lines:
+        ends.append(((l.x1, l.y1), (l.x2, l.y2)))
+        ends.append(((l.x2, l.y2), (l.x1, l.y1)))
+    out = []
+    for i, (p, q) in enumerate(ends):
+        if any(j != i and math.hypot(p[0] - ends[j][0][0], p[1] - ends[j][0][1]) <= tol for j in range(len(ends))):
+            continue
+        if any(math.hypot(p[0] - t[0], p[1] - t[1]) <= tol for t in taken):
+            continue
+        L = math.hypot(p[0] - q[0], p[1] - q[1])
+        if L > 1e-9:
+            out.append((p, ((p[0] - q[0]) / L, (p[1] - q[1]) / L)))
+    return out
+
+
+def goto_connectors(project, a, b, name):
+    """Place a From connector on wire a (skipped when a is None: the wire already has one) and a To
+    connector on wire b (each a (page, Net)), both called `name`, at a free end of the wire: From
+    where the wire leaves to the right, To where it arrives from the left, turned to suit.
+    -> ([(page, 'From'|'To', (x, y), rotation, name)], [problems])."""
+    out, bad = [], []
+    for kind, w in (("From", a), ("To", b)):
+        if w is None:
+            continue
+        pg, net = w
+        ends = free_ends(project, pg, net)
+        if not ends:
+            bad.append(f"Sheet {pg:02d}: the wire near x={net.anchor[0]:.2f} has no free end for a {kind}")
+            continue
+        sg = 1 if kind == "From" else -1
+        p, d = max(ends, key=lambda e: (round(sg * e[1][0], 3), round(sg * e[0][0], 3)))
+        ang = math.degrees(math.atan2(sg * d[1], sg * d[0]))
+        out.append((pg, kind, p, round(ang, 3) % 360.0, name))
+    return out, bad
+
+
+def net_from_name(project, page, net, tol=1e-4):
+    """Name of the From connector already sitting on this wire, or ''."""
+    sh = project.sheets[page]
+    for e in leaves(sh.entities):
+        if isinstance(e, m.BlockRef) and e.tag and e.block == "From":
+            blk = project.blocks.get(e.block)
+            if blk is None or not blk.slots:
+                continue
+            pt = block_slots(blk, e)[0][1]
+            if any(_on_segment(pt, l, tol) for l in net.lines):
+                return e.tag
+    return ""
+
+
+def goto_plan(project, to_line_ids, from_line_id):
+    """Tie two wires with a goto from the wire menu. The selected wire is the To end, the picked
+    wire the From end. One From can go to several Tos: when the picked wire already has a From, its
+    name is reused and only a To is added. -> (name, from_net or None, to_net, value) or None when
+    the picked wire has no number."""
     this = other = None
-    this_ids = set(this_line_ids)
+    this_ids = set(to_line_ids)
     for pg in sorted(project.sheets):
-        for n in build_nets(project, project.sheets[pg], include=this_ids | {other_line_id}):
+        for n in build_nets(project, project.sheets[pg], include=this_ids | {from_line_id}):
             ids = {l.id for l in n.lines}
             if ids & this_ids and this is None:
                 this = (pg, n)
-            if other_line_id in ids and other is None:
+            if from_line_id in ids and other is None:
                 other = (pg, n)
     if this is None or other is None or this[1] is other[1]:
         return None
-    val, mode = _net_value(other[1])
+    val, _ = _net_value(other[1])
     if not val:
         return None
-    plan = []
-    if mode == "goto" and goto_names(val)[1]:
-        new = val                                        # join the existing set
-    else:
-        new = f"{val}-{_next_goto(project, val)}"
-        plan.append((other[0], other[1].lines, m.WireNumber("goto", new)))
-    plan.append((this[0], this[1].lines, m.WireNumber("goto", new)))
-    return plan
+    have = net_from_name(project, *other)
+    if have:
+        return have, None, this, val
+    return next_connector_name(project, val), other, this, val
 
 
 def goto_duplicates(project, duplicates):
-    """Resolve the duplicates a report found. The wires sharing a number are taken two at a
-    time, in sheet / position order: the first pair is a set NUMBER-1 (both ends), the next pair
-    NUMBER-2 ... A wire left over on its own gets the next number by itself.
-    -> [(page, [lines], WireNumber)]."""
-    plan = []
+    """Resolve the duplicates a report found. The wires sharing a number are taken two at a time
+    (sheet / position order): the first pair becomes a set NUMBER-1, the next NUMBER-2 ... the
+    first wire of a pair gets the From, the second the To. A wire left over is skipped.
+    -> [(name, (page, Net), (page, Net))]."""
+    plan, taken = [], []
     for val, members in duplicates:
-        k = _next_goto(project, val) - 1
-        for i in range(0, len(members), 2):
-            k += 1
-            for pg, net in members[i:i + 2]:
-                plan.append((pg, net.lines, m.WireNumber("goto", f"{val}-{k}")))
+        for i in range(0, len(members) - 1, 2):
+            name = next_connector_name(project, val, taken)
+            taken.append(name)
+            plan.append((name, members[i], members[i + 1]))
     return plan
 
 

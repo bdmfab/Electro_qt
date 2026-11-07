@@ -13,7 +13,7 @@ class WireNumberDialog(QDialog):
                         ("Override (my number; the sequence goes on)", "override"),
                         ("Locked (never changed)", "locked"),
                         ("Clear (no number at all)", "clear"),
-                        ("Goto (tie to another wire: both ends get NUMBER-1, the next set NUMBER-2)", "goto")):
+                        ("Goto (this wire is the To; pick the From wire. From / To connectors named NUMBER-1, -2 ...)", "goto")):
             if v == "goto" and not others:
                 continue
             self.mode.addItem(text, v)
@@ -26,7 +26,7 @@ class WireNumberDialog(QDialog):
             self.other.addItem(label, lid)
         self.mode.currentIndexChanged.connect(self._sync)
         form = QFormLayout()
-        form.addRow("Mode", self.mode); form.addRow("Number", self.value); form.addRow("Tie to wire", self.other)
+        form.addRow("Mode", self.mode); form.addRow("Number", self.value); form.addRow("From wire", self.other)
         form.addRow(QLabel("Applies to the whole wire (every connected segment)."))
         bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         bb.accepted.connect(self.accept); bb.rejected.connect(self.reject)

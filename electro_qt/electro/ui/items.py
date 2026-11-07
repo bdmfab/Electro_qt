@@ -177,13 +177,18 @@ class TextItem(_Common, QGraphicsPathItem):
         super().__init__()
         font = QFont(e.font or "Sans Serif"); font.setPixelSize(100)
         fm = QFontMetricsF(font)
-        lines = ("" if getattr(e, "hidden", False) else (e.resolved or e.source)).split("\n")
-        width = max((fm.horizontalAdvance(s) for s in lines), default=0.0)
-        path = QPainterPath()
-        for i, s in enumerate(lines):
-            lw = fm.horizontalAdvance(s)
-            x = {"center": (width - lw) / 2, "right": width - lw}.get(e.align, 0.0)
-            path.addText(x, i * fm.lineSpacing(), font, s)
+        txt = "" if getattr(e, "hidden", False) else (e.resolved or e.source)
+        self._parts = None
+        if getattr(e, "rich", False):
+            path, width = self._rich_path(e, txt, font, fm)
+        else:
+            lines = txt.split("\n")
+            width = max((fm.horizontalAdvance(s) for s in lines), default=0.0)
+            path = QPainterPath()
+            for i, s in enumerate(lines):
+                lw = fm.horizontalAdvance(s)
+                x = {"center": (width - lw) / 2, "right": width - lw}.get(e.align, 0.0)
+                path.addText(x, i * fm.lineSpacing(), font, s)
         self.setPath(path)
         dx = {"center": width / 2, "right": width}.get(e.align, 0.0)
         k = (e.height / 0.72) / 100.0
@@ -195,6 +200,37 @@ class TextItem(_Common, QGraphicsPathItem):
         self.setTransform(t)
         self._setup(e, layers, scene_ref)
 
+    def _rich_path(self, e, txt, base_font, base_fm):
+        """Formatted text: each run is its own path (bold / italic / size / underline / colour)."""
+        from .. import richtext
+        fam = e.font or "Sans Serif"
+        layout, widths = [], []
+        for runs in richtext.parse(txt):
+            pieces, w = [], 0.0
+            for r in runs:
+                f = QFont(fam); f.setPixelSize(max(1, int(round(100 * r.size))))
+                f.setBold(r.bold); f.setItalic(r.italic)
+                adv = QFontMetricsF(f).horizontalAdvance(r.text)
+                pieces.append((r, f, adv)); w += adv
+            layout.append((pieces, max((r.size for r in runs), default=1.0)))
+            widths.append(w)
+        width = max(widths, default=0.0)
+        parts, total, y = [], QPainterPath(), 0.0
+        for li, (pieces, big) in enumerate(layout):
+            if li:
+                y += base_fm.lineSpacing() * big
+            x = {"center": (width - widths[li]) / 2, "right": width - widths[li]}.get(e.align, 0.0)
+            for r, f, adv in pieces:
+                p = QPainterPath(); p.addText(x, y, f, r.text)
+                if r.underline:
+                    px = f.pixelSize()
+                    p.addRect(x, y + 0.12 * px, adv, max(1.0, 0.06 * px))
+                parts.append((p, aci_color(r.color) if r.color else None))
+                total.addPath(p)
+                x += adv
+        self._parts = parts
+        return total, width
+
     def shape(self):
         p = QPainterPath(); p.addRect(self.path().boundingRect())
         return p
@@ -203,7 +239,13 @@ class TextItem(_Common, QGraphicsPathItem):
         return self.path().boundingRect()
 
     def paint(self, painter, option, widget=None):
-        painter.setPen(QPen(Qt.PenStyle.NoPen)); painter.setBrush(self.brush())
+        painter.setPen(QPen(Qt.PenStyle.NoPen))
+        if self._parts:
+            for p, c in self._parts:
+                painter.setBrush(QBrush(c) if c is not None else self.brush())
+                painter.drawPath(p)
+            return
+        painter.setBrush(self.brush())
         painter.drawPath(self.path())
 
     def _restyle(self, selected):

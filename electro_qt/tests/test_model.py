@@ -624,12 +624,12 @@ def test_xref_and_off_page_connector():
     p.layers["W"] = m.Layer("W", 5, "wire", True, "N<incident>")
     p.blocks["PB"] = m.BlockDef("PB", increment=1, slots=[m.Slot("1", 0, 0), m.Slot("2", 1, 0)])
     goto = bk.default_connector_block("from")
-    assert bk.label_lines_of(goto) == ("xref",) and goto.label_pos == "center" and goto.connector == 1
+    assert bk.label_lines_of(goto) == ("xref",) and goto.label_pos == "right" and goto.connector == 1
     assert len(goto.slots) == 1 and (goto.slots[0].x, goto.slots[0].y) == (0, 0)
     to = bk.default_connector_block("to")
     assert bk.label_lines_of(to) == () and len(to.slots) == 1 and to.name != goto.name
     t = [e for e in goto.entities if isinstance(e, m.Text)][0]
-    assert t.height < 0.1 and 0 < t.x < 0.5 and abs(t.y) < 0.1                  # small, inside the shape
+    assert t.x > 0.5 and abs(t.y) < 0.1 and t.align == "left"                  # beside the arrow, to its right
     p.blocks["GOTO"] = goto
     w1 = m.Line(0, 5, 3, 5, m.Style("W")); w1.mark = "1"
     s1.entities += [w1, m.BlockRef("PB", 3, 5, tag="S1"), m.Line(4, 5, 6, 5, m.Style("W")),
@@ -686,43 +686,215 @@ def test_single_slot_connector_trims_wire():
     assert bk.trim_ops(p, [wire], [m.BlockRef("F", 6, 5, rotation=90)]) == []   # body square to the wire
 
 
-def test_goto_numbers_and_duplicates():
+def test_goto_connectors():
     from electro import numbering as nb
+    from electro import blocks as bk
     p = m.Project("g")
     sheets = [p.add_sheet(m.Sheet(i)) for i in (1, 2, 3, 4, 5)]
     p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    for blk in (bk.default_connector_block("from"), bk.default_connector_block("to")):
+        p.blocks[blk.name] = blk
     for sh in sheets:
-        ln = m.Line(0, 5, 2, 5, m.Style("W")); ln.number = m.WireNumber("override", "02041")
+        ln = m.Line(1, 5, 3, 5, m.Style("W")); ln.number = m.WireNumber("override", "02041")
         sh.entities.append(ln)
     rep = nb.update(p)
     assert [v for v, _ in rep.duplicates] == ["02041"] and len(rep.duplicates[0][1]) == 5
     plan = nb.goto_duplicates(p, rep.duplicates)
-    assert [(pg, n.value) for pg, _, n in plan] == [(1, "02041-1"), (2, "02041-1"), (3, "02041-2"), (4, "02041-2"),
-                                                    (5, "02041-3")]          # pairs are sets; the odd one is alone
-    for pg, lines, num in plan:
-        for l in lines:
-            l.number = num
+    assert [n for n, _, _ in plan] == ["02041-1", "02041-2"]                     # pairs; the odd wire is left
+    name, a, b = plan[0]
+    put, bad = nb.goto_connectors(p, a, b, name)
+    assert not bad
+    (pg1, k1, pt1, r1, n1), (pg2, k2, pt2, r2, n2) = put
+    assert (pg1, k1, pt1, r1) == (1, "From", (3, 5), 0.0)                        # leaves to the right
+    assert (pg2, k2, pt2, r2) == (2, "To", (1, 5), 0.0)                          # arrives from the left, body further left
+    assert n1 == n2 == "02041-1"
+    # place the connectors: the wires are now one group, no longer duplicates, numbers unchanged
+    for pg, kind, pt, rot, nm in put:
+        r = m.BlockRef(kind, pt[0], pt[1], rot); r.tag = nm
+        p.sheets[pg].entities.append(r)
+    assert nb.next_connector_name(p, "02041") == "02041-2"
+    for pg, kind, pt, rot, nm in nb.goto_connectors(p, plan[1][1], plan[1][2], plan[1][0])[0]:
+        r = m.BlockRef(kind, pt[0], pt[1], rot); r.tag = nm
+        p.sheets[pg].entities.append(r)
     r2 = nb.update(p)
-    assert r2.duplicates == [] and not r2.warnings                            # a set is not a duplicate
-    # tie a wire to a plain-numbered one: both ends take NUMBER-1; the next set is NUMBER-2
-    q = m.Project("h"); ts = [q.add_sheet(m.Sheet(i)) for i in (1, 2, 3, 4)]
-    q.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
-    x = m.Line(0, 5, 2, 5, m.Style("W")); x.number = m.WireNumber("override", "7")
-    y = m.Line(0, 5, 2, 5, m.Style("W"))
-    x2 = m.Line(0, 5, 2, 5, m.Style("W")); x2.number = m.WireNumber("override", "7")
-    y2 = m.Line(0, 5, 2, 5, m.Style("W"))
-    for sh, ln in zip(ts, (x, y, x2, y2)):
-        sh.entities.append(ln)
-    plan = nb.goto_plan(q, {y.id}, x.id)
-    assert [(pg, n.value, n.mode) for pg, _, n in plan] == [(1, "7-1", "goto"), (2, "7-1", "goto")]
-    for pg, lines, num in plan:
-        for l in lines:
-            l.number = num
-    plan = nb.goto_plan(q, {y2.id}, x2.id)                                    # another set of 7
-    assert [(pg, n.value) for pg, _, n in plan] == [(3, "7-2"), (4, "7-2")]
-    for pg, lines, num in plan:
-        for l in lines:
-            l.number = num
-    z = m.Line(0, 3, 2, 3, m.Style("W")); ts[3].entities.append(z)
-    plan = nb.goto_plan(q, {z.id}, x.id)                                      # picked wire is already in set 7-1
-    assert [(pg, n.value) for pg, _, n in plan] == [(4, "7-1")]
+    assert r2.duplicates == []                                                  # two sets + one plain wire
+    assert all(l.number.value == "02041" for sh in sheets for l in sh.entities if isinstance(l, m.Line))
+    # a wire with both ends on parts has no free end
+    q = m.Project("h"); sh = q.add_sheet(m.Sheet(1)); q.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    q.blocks["From"] = bk.default_connector_block("from")
+    sh.entities += [m.Line(1, 5, 3, 5, m.Style("W")), m.BlockRef("From", 1, 5), m.BlockRef("From", 3, 5)]
+    net = nb.build_nets(q, sh)[0]
+    assert nb.free_ends(q, 1, net) == []
+
+
+def test_richtext_parse_roundtrip():
+    from electro import richtext as rt
+    mk = "Hello <b>bold <i>both</i></b> <size=1.5><color=1>big red</color></size>\n2 &lt; 3 &amp; <u>x</u>"
+    lines = rt.parse(mk)
+    assert len(lines) == 2
+    assert [r.text for r in lines[0]] == ["Hello ", "bold ", "both", " ", "big red"]
+    assert lines[0][1].bold and not lines[0][1].italic and lines[0][2].italic and lines[0][2].bold
+    assert lines[0][4].size == 1.5 and lines[0][4].color == 1
+    assert rt.plain(mk) == "Hello bold both big red\n2 < 3 & x"
+    assert rt.parse(rt.dumps(lines)) == lines
+
+
+def test_richtext_fields_and_save(tmp_path):
+    from electro import fields, richtext as rt
+    t = m.Text(0, 0, "A <b>B</b>", "A <b>B</b>", 0.12, 0.0, m.Style(), rich=True)
+    from electro.geometry import text_extent
+    x0, y0, x1, y1 = text_extent(t)
+    assert x1 - x0 > 0
+    p = m.Project(); sh = m.Sheet(1); p.add_sheet(sh); sh.entities.append(t)
+    f = str(tmp_path / "r.eqt")
+    from electro import xmlio
+    xmlio.save_project(p, f)
+    q = xmlio.load_project(f)
+    t2 = q.sheet(1).entities[0] if hasattr(q, "sheet") else list(q.sheets.values())[0].entities[0]
+    assert t2.rich is True and t2.source == "A <b>B</b>"
+
+
+def test_goto_one_from_many_to():
+    from electro import numbering as nb, blocks as bk
+    p = m.Project("g")
+    sh = [p.add_sheet(m.Sheet(i)) for i in (1, 2, 3)]
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    for k in ("from", "to"):
+        b = bk.default_connector_block(k); p.blocks[b.name] = b
+    src = m.Line(1, 5, 3, 5, m.Style("W")); src.number = m.WireNumber("override", "55")
+    t1 = m.Line(1, 5, 3, 5, m.Style("W")); t2 = m.Line(1, 5, 3, 5, m.Style("W"))
+    for s_, l in zip(sh, (src, t1, t2)):
+        s_.entities.append(l)
+    name, frm, to, val = nb.goto_plan(p, {t1.id}, src.id)          # selected wire = To, picked = From
+    assert (name, val) == ("55-1", "55") and frm[0] == 1 and to[0] == 2
+    put, bad = nb.goto_connectors(p, frm, to, name)
+    assert [k for _, k, *_ in put] == ["From", "To"]
+    for pg, kind, pt, rot, nm in put:
+        r = m.BlockRef(kind, pt[0], pt[1], rot); r.tag = nm; p.sheets[pg].entities.append(r)
+    name2, frm2, to2, _ = nb.goto_plan(p, {t2.id}, src.id)         # the same From goes to a second To
+    assert name2 == "55-1" and frm2 is None and to2[0] == 3
+    put2, _ = nb.goto_connectors(p, frm2, to2, name2)
+    assert [k for _, k, *_ in put2] == ["To"]
+
+
+def test_dxf_export_with_stub():
+    from unittest.mock import MagicMock
+    from electro import dxfexport as dx, blocks as bk
+    assert dx.safe_name('a/b:c') == "a_b_c" and dx.lineweight(0.5) == 50 and dx.lineweight(0) == -3
+    assert dx.mtext_markup("a{b}\nc", False) == "a\\{b\\}\\Pc"
+    mk = dx.mtext_markup("x <b>y</b> <size=2>z</size> <u>u</u>", True)
+    assert "\\fArial|b1|i0;" in mk and "\\H2x;" in mk and "\\Lu\\l" in mk
+    p = m.Project("d"); sh = p.add_sheet(m.Sheet(1))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    blk = bk.make_block("K1 coil", [m.Line(0, 0, 1, 0, m.Style("0")), m.Line(0, 0, 0, -1, m.Style("0")),
+                                    m.SlotMark(0, 0, "A1")], (0, 0), ("tag", "description"), "right",
+                        description="Relay")
+    p.blocks[blk.name] = blk
+    r = m.BlockRef("K1 coil", 4, 5, 90, True); r.tag = "K1"
+    sh.entities += [m.Line(0, 5, 4, 5, m.Style("W")), r, m.Circle(1, 1, 0.04, m.Style("0"), filled=True),
+                    m.Text(1, 1, "hi", "hi", 0.1, 0.0, m.Style("0"), rich=False),
+                    m.Text(2, 2, "<b>big</b>", "<b>big</b>", 0.1, 0.0, m.Style("0"), rich=True, align="center")]
+    attrs = dx.ref_attributes(p, sh, blk, r)
+    tags = [a[0] for a in attrs]
+    assert {"TAG", "DESCRIPTION", "PART_NUMBER", "MANUFACTURER", "XREF", "TERM1"} <= set(tags)
+    assert dict((a[0], a[1]) for a in attrs)["TAG"] == "K1" and dict((a[0], a[1]) for a in attrs)["DESCRIPTION"] == "Relay"
+    assert [a[5] for a in attrs if a[0] == "TAG"] == [True]                         # a label: visible
+    ez = MagicMock()
+    ex = dx.Exporter(p, ez)
+    ex.add_sheet(sh)
+    msp = ez.new.return_value.modelspace.return_value
+    assert msp.add_line.called and msp.add_blockref.called and msp.add_mtext.called and msp.add_hatch.called
+    args = msp.add_blockref.call_args
+    assert args[0][0] == "K1 coil" and args[1]["dxfattribs"]["xscale"] == -1.0 and args[1]["dxfattribs"]["rotation"] == 90
+    assert ez.new.return_value.blocks.new.call_args[1]["name"] == "K1 coil"
+
+
+def test_export_names_and_dxf_files(tmp_path):
+    from unittest.mock import MagicMock
+    from electro import exportnames as en, dxfexport as dx
+    p = m.Project("x"); p.info["job"] = "J/123: Press"
+    s1 = p.add_sheet(m.Sheet(1, title="Power  Main")); s2 = p.add_sheet(m.Sheet(2))
+    assert en.sheet_stem(s1) == "01 Power Main" and en.sheet_stem(s2) == "02"
+    assert en.job_stem(p) == "J_123_ Press"
+    p.info["job"] = ""
+    assert en.job_stem(p, "/a/b/Plant.eqt") == "Plant" and en.job_stem(p) == "job"
+    assert en.export_folder("/a/b/Plant.eqt", "pdf").replace("\\", "/") == "/a/b/pdf"
+    paths = dx.export_project(p, str(tmp_path / "dxf"), ez=MagicMock())
+    assert [x.replace("\\", "/").split("/")[-1] for x in paths] == ["01 Power Main.dxf", "02.dxf"]
+    assert (tmp_path / "dxf").is_dir()
+
+
+def test_dxf_layer_names_case_insensitive():
+    from unittest.mock import MagicMock
+    from electro import dxfexport as dx
+    p = m.Project("c"); p.layers["Dashed"] = m.Layer("Dashed", 3); p.layers["DASHED"] = m.Layer("DASHED", 3)
+    ez = MagicMock()
+    ex = dx.Exporter(p, ez)
+    assert ex.add_layer("dashed") == "Dashed"
+    assert [c[0][0] for c in ez.new.return_value.layers.add.call_args_list] == ["Dashed"]
+
+
+def test_title_block_double_weight():
+    from electro import templates as t
+    sh = t.tabloid_template()
+    fr = t.display_frame(sh)
+    heavy = [e for e in fr if isinstance(e, (m.Line, m.Arc)) and e.style.width == t.TITLE_BLOCK_MM]
+    light = [e for e in fr if isinstance(e, (m.Line, m.Arc)) and e.style.width == 0]
+    assert heavy and light                                  # title block heavy, border / zone ruler unchanged
+    border = [e for e in heavy if isinstance(e, m.Line) and max(e.x1, e.x2) < 15.0]
+    assert len(border) == 8                                 # four sides + four chamfers
+    hexes = [e for e in light if isinstance(e, m.Line) and e.x1 < 0.5]
+    assert hexes and all(e.style.width == 0 for e in hexes)  # zone markers stay light
+    assert all(e.style.width == 0 for e in sh.frame)        # stored frame untouched
+
+
+def test_rule_check():
+    from electro import rules, blocks as bk
+    p = m.Project("r")
+    s1 = p.add_sheet(m.Sheet(1)); s2 = p.add_sheet(m.Sheet(2))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<page><zone><incident>")
+    pb = bk.make_block("PB", [m.Line(0, 0, 1, 0, m.Style("0")), m.SlotMark(0, 0, "1"), m.SlotMark(1, 0, "2")],
+                       (0, 0), ("tag",), "above", tag_prefix="S")
+    p.blocks["PB"] = pb
+    c = bk.default_connector_block("from"); p.blocks[c.name] = c
+    w = m.Line(0, 5, 1, 5, m.Style("W")); w.mark = "1"
+    a = m.BlockRef("PB", 1, 5, tag="S1")                       # slot 1 on the wire, slot 2 loose
+    b = m.BlockRef("PB", 6, 6, tag="S1")                       # same tag, nothing connected
+    d = m.BlockRef("PB", 8, 8, tag="")                         # no tag
+    k = m.BlockRef("PB", 9, 9, tag="K1", props={"tag_mode": "linked", "tag_link": "gone"})
+    f = m.BlockRef("From", 3, 3, tag="X-1")                    # connector with no partner
+    s1.entities += [w, a, b, d, k, f]
+    s2.entities += [m.Line(0, 5, 2, 5, m.Style("W"))]          # a wire no marked wire reaches
+    cats = [i.category for i in rules.check(p)]
+    for c_ in ("Duplicate tag", "Missing tag", "Unconnected slot", "Wire not reached", "Broken tag link",
+               "Connector without partner"):
+        assert c_ in cats, (c_, cats)
+    assert cats.count("Duplicate tag") == 2
+    # a coil and its linked contact share a tag on purpose
+    q = m.Project("q"); sh = q.add_sheet(m.Sheet(1)); q.blocks["PB"] = pb
+    coil = m.BlockRef("PB", 1, 1, tag="K1"); cont = m.BlockRef("PB", 3, 3, tag="K1", props={"tag_mode": "linked", "tag_link": coil.id})
+    sh.entities += [coil, cont]
+    assert "Duplicate tag" not in [i.category for i in rules.check(q)]
+    assert rules.as_rows(rules.check(q))[0][0] in rules.CATEGORIES
+
+
+def test_bom_skips_connectors_and_flags_blank_part_numbers():
+    from electro import reports, blocks as bk
+    p = m.Project("b"); sh = p.add_sheet(m.Sheet(1))
+    c = bk.default_connector_block("from"); p.blocks[c.name] = c
+    a = bk.make_block("Relay", [m.Line(0, 0, 1, 0, m.Style("0"))], (0, 0), (), "above", part_number="")
+    b = bk.make_block("Lamp", [m.Line(0, 0, 1, 0, m.Style("0"))], (0, 0), (), "above", part_number="L-1")
+    p.blocks["Relay"], p.blocks["Lamp"] = a, b
+    sh.entities += [m.BlockRef("From", 0, 0, tag="X-1"), m.BlockRef("Relay", 1, 1, tag="K1"),
+                    m.BlockRef("Relay", 2, 2, tag="K2"), m.BlockRef("Lamp", 3, 3, tag="H1")]
+    _, rows = reports.bom(p)
+    assert [r[5] for r in rows].count("From") == 0 and sum(r[1] for r in rows) == 3
+    assert reports.bom_missing_part_numbers(rows) == [("Relay", 2, "K1, K2")]
+
+
+def test_auto_layers_named_dashed_and_gray():
+    from electro import blocks as bk
+    d = bk.default_layer("Dashed"); g = bk.default_layer("Light Grey"); n = bk.default_layer("Power")
+    assert d.linetype == "dashed" and d.color == 7
+    assert g.color == 8 and g.linetype == "continuous"
+    assert n.linetype == "continuous" and n.color == 7

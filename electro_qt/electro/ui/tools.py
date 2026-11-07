@@ -16,6 +16,7 @@ from .. import blocks as bk
 from ..geometry import arc_extent_points, text_extent, translate as _translate
 import copy as _copy
 from . import clipboard
+from .. import fields
 from .commands import EditCmd, StretchCmd, AddBundleCmd
 from ..junctions import trim_wire_start
 from .items import aci_color
@@ -282,12 +283,16 @@ class TextTool(Tool):
     def hint(self): return "Text: click where the text goes"
 
     def press(self, pt):
-        txt, ok = QInputDialog.getMultiLineText(QApplication.activeWindow(), "New text", "Text:")
+        from .textdlg import RichTextDialog
+        dlg = RichTextDialog(QApplication.activeWindow(), "", False, "New text", self.scene.current_text_style().align)
+        ok = dlg.exec()
+        txt, rich = dlg.result_markup() if ok else ("", False)
         sc = self.scene
         if ok and txt.strip():
             ts = sc.current_text_style()
-            sc.add_entities([m.Text(pt[0], pt[1], txt, txt, ts.height, 0.0, sc.new_style(ts.color),
-                                    font=ts.font, align=ts.align, tstyle=ts.name)], "Text")
+            res = fields.resolve(txt, fields.context(sc.project, sc.sheet))
+            sc.add_entities([m.Text(pt[0], pt[1], txt, res, ts.height, 0.0, sc.new_style(ts.color),
+                                    font=ts.font, align=dlg.align, tstyle=ts.name, rich=rich)], "Text")
         sc.tool_done()
 
 

@@ -94,6 +94,18 @@ def capture_layers(project: m.Project, blk: m.BlockDef) -> None:
             blk.layers[n] = copy.deepcopy(project.layers[n])
 
 
+def default_layer(name: str) -> m.Layer:
+    """A layer made on the fly for a block that did not bring its own definition: named after what it
+    holds (a 'dashed' layer is dashed, a 'gray' layer is gray)."""
+    n = name.lower()
+    lay = m.Layer(name)
+    if "dash" in n:
+        lay.linetype = "dashed"
+    if "gray" in n or "grey" in n:
+        lay.color = 8
+    return lay
+
+
 def ensure_layers(project: m.Project, blk: m.BlockDef) -> list:
     """Add the layers a block's graphics use that this project lacks: the definition stored
     with the block, else a plain default layer. -> names added."""
@@ -101,14 +113,14 @@ def ensure_layers(project: m.Project, blk: m.BlockDef) -> list:
     added = []
     for n in block_layer_names(blk):
         if n not in project.layers:
-            project.layers[n] = copy.deepcopy(blk.layers[n]) if n in blk.layers else m.Layer(n)
+            project.layers[n] = copy.deepcopy(blk.layers[n]) if n in blk.layers else default_layer(n)
             added.append(n)
     return added
 
 
 def default_connector_block(kind="from") -> m.BlockDef:
     """Ready-made off-page connectors, one slot each (the wire attaches there). 'GOTO From':
-    wire at the flat back of the arrow, shows the cross-reference inside. 'GOTO To': wire at
+    wire at the flat back of the arrow, shows the cross-reference to its right. 'GOTO To': wire at
     the tip (front), no text (the wire number already says where it goes). Rotate / mirror when
     placing to suit the wire direction."""
     if kind == "from":
@@ -119,8 +131,12 @@ def default_connector_block(kind="from") -> m.BlockDef:
         name, lines = "To", ()
     ents = [m.Line(*pts[i], *pts[(i + 1) % 5], m.Style("0")) for i in range(5)]
     ents.append(m.SlotMark(0, 0, ""))
-    return make_block(name, ents, (0, 0), lines, "center", description="Off-page connector " + kind,
-                      connector=1, poles=1, folder="GOTO")
+    blk = make_block(name, ents, (0, 0), lines, "right", description="Off-page connector " + kind,
+                     connector=1, poles=1, folder="GOTO")
+    for t in blk.entities:                           # the name sits beside the arrow, centred on it
+        if isinstance(t, m.Text):
+            t.y -= 0.1
+    return blk
 
 
 def block_context(project: m.Project, sheet: m.Sheet, block: m.BlockDef, ref: m.BlockRef) -> dict:
