@@ -107,17 +107,22 @@ class MainWindow(QMainWindow):
 
     def on_add_connector_block(self):
         import copy
-        blk = bk.default_connector_block()
-        if blk.name in self.store.blocks:
-            QMessageBox.information(self, "Off-page connector", "The library already has a block named GOTO."); return
-        self.project.blocks.setdefault(blk.name, copy.deepcopy(blk))
-        try:
-            self.store.save_block(blk)
-        except OSError as ex:
-            QMessageBox.warning(self, "Library", f"Could not write the library file:\n{ex}")
+        added = []
+        for kind in ("from", "to"):
+            blk = bk.default_connector_block(kind)
+            if blk.name in self.store.blocks:
+                continue
+            self.project.blocks.setdefault(blk.name, copy.deepcopy(blk))
+            try:
+                self.store.new_folder(blk.folder)
+                self.store.save_block(blk)
+            except OSError as ex:
+                QMessageBox.warning(self, "Library", f"Could not write the library file:\n{ex}"); return
+            added.append(blk.name)
         self._dirty_library()
-        self.statusBar().showMessage("Added block GOTO to the library. Place it at the end of a wire on each sheet, "
-                                     "giving both the same name.", 10000)
+        self.statusBar().showMessage(
+            ("Added " + " and ".join(added) + " to the library folder GOTO. Place From / To at the ends of the wire "
+             "on each sheet, giving both the same name.") if added else "From and To are already in the library.", 10000)
 
     def _sheet_scenes(self):
         return [sc for sc in self._scenes() if not sc.block_edit]
@@ -149,6 +154,7 @@ class MainWindow(QMainWindow):
         sc.block_made.connect(self._block_made)
         sc.edit_block_requested.connect(self.on_edit_block_geometry)
         sc.undo.indexChanged.connect(lambda _i: self._refresh_xrefs())
+        sc.scene_for_page = lambda pg: next((x for x in self._sheet_scenes() if x.sheet.page == pg), None)
         sc.folder_choices = list(self.store.folders)
         sc.undo.cleanChanged.connect(self._title)
         i = self.tabs.addTab(v, self._tab_label(sheet))
@@ -864,13 +870,37 @@ class MainWindow(QMainWindow):
                 sc.undo.push(EditCmd(sc, "Update wire numbers", modify=[(l, {"number": num}) for l, num in lst]))
                 n += len(lst)
         self.statusBar().showMessage(f"Wire numbers: {rep.numbered} of {rep.nets} wire(s) numbered, {n} line(s) changed")
-        if rep.warnings:
-            QMessageBox.warning(self, "Wire number warnings", "\n".join(rep.warnings[:30])
-                                + ("\n..." if len(rep.warnings) > 30 else ""))
+        warnings = list(rep.warnings)
+        if rep.duplicates:
+            lines = []
+            for val, members in rep.duplicates:
+                where = ", ".join(f"{pg:02d}/{bk.zone_text(self.project.sheets[pg], *net.anchor)}" for pg, net in members)
+                lines.append(f"{val}  (sheet/zone {where})")
+            r = QMessageBox.question(self, "Duplicate wire numbers",
+                                     "These numbers are used by more than one wire:\n\n" + "\n".join(lines[:20])
+                                     + ("\n..." if len(lines) > 20 else "")
+                                     + "\n\nApply a goto? Wires are taken two at a time (sheet / position order): the first pair "
+                                       "becomes NUMBER-1 on both ends, the next pair NUMBER-2 ... Gotos are no longer "
+                                       "reported as duplicates.")
+            if r == QMessageBox.StandardButton.Yes:
+                self.apply_number_plan(nb.goto_duplicates(self.project, rep.duplicates), "Apply goto")
+                warnings = [w for w in warnings if not w.startswith("Number ")]
+        if warnings:
+            QMessageBox.warning(self, "Wire number warnings", "\n".join(warnings[:30])
+                                + ("\n..." if len(warnings) > 30 else ""))
         if rep.nets == 0:
             QMessageBox.information(self, "Wire numbers",
                                     "No numbered wire lines were found. Wires must be on a wire layer with "
                                     "'numbered' ticked (Layers...), and a wire must be marked: right-click > Mark wire.")
+
+    def apply_number_plan(self, plan, label):
+        """plan = [(page, lines, WireNumber)] -> undoable edits on each sheet's own scene."""
+        per = {}
+        for pg, lines, num in plan:
+            per.setdefault(pg, []).extend((l, {"number": num}) for l in lines)
+        for sc in self._sheet_scenes():
+            if sc.sheet.page in per:
+                sc.undo.push(EditCmd(sc, label, modify=per[sc.sheet.page]))
 
     def on_update_tags(self):
         r = QMessageBox.question(self, "Update device tags",

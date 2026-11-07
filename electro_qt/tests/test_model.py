@@ -623,8 +623,13 @@ def test_xref_and_off_page_connector():
     s1, s2 = p.add_sheet(m.Sheet(1)), p.add_sheet(m.Sheet(2))
     p.layers["W"] = m.Layer("W", 5, "wire", True, "N<incident>")
     p.blocks["PB"] = m.BlockDef("PB", increment=1, slots=[m.Slot("1", 0, 0), m.Slot("2", 1, 0)])
-    goto = bk.default_connector_block()
-    assert bk.label_lines_of(goto) == ("tag", "xref") and goto.connector == 1 and len(goto.slots) == 1
+    goto = bk.default_connector_block("from")
+    assert bk.label_lines_of(goto) == ("xref",) and goto.label_pos == "center" and goto.connector == 1
+    assert len(goto.slots) == 1 and (goto.slots[0].x, goto.slots[0].y) == (0, 0)
+    to = bk.default_connector_block("to")
+    assert bk.label_lines_of(to) == () and len(to.slots) == 1 and to.name != goto.name
+    t = [e for e in goto.entities if isinstance(e, m.Text)][0]
+    assert t.height < 0.1 and 0 < t.x < 0.5 and abs(t.y) < 0.1                  # small, inside the shape
     p.blocks["GOTO"] = goto
     w1 = m.Line(0, 5, 3, 5, m.Style("W")); w1.mark = "1"
     s1.entities += [w1, m.BlockRef("PB", 3, 5, tag="S1"), m.Line(4, 5, 6, 5, m.Style("W")),
@@ -662,3 +667,62 @@ def test_block_brings_its_layers(tmp_path):
     assert dst.layers["HIDDEN"].linetype == "dashed" and dst.layers["HIDDEN"].color == 3
     assert dst.layers["NOPE"].color == 7 and dst.layers["NOPE"].linetype == "continuous"   # plain default
     assert bk.ensure_layers(dst, blk2) == []
+
+
+def test_single_slot_connector_trims_wire():
+    from electro import blocks as bk
+    p = m.Project("t")
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<incident>")
+    p.blocks["F"] = bk.default_connector_block("from")       # body to the right of the slot
+    p.blocks["T"] = bk.default_connector_block("to")         # slot at the tip, body to the left
+    wire = m.Line(0, 5, 10, 5, m.Style("W"))
+    ops = bk.trim_ops(p, [wire], [m.BlockRef("F", 6, 5)])
+    assert len(ops) == 1 and ops[0][1] == [(0, 5, 6, 5)]      # keeps the wire's side, drops the part under the symbol
+    ops = bk.trim_ops(p, [wire], [m.BlockRef("T", 6, 5)])
+    assert ops[0][1] == [(6, 5, 10, 5)]                       # "To" is already turned 180: body on the left
+    ops = bk.trim_ops(p, [wire], [m.BlockRef("F", 6, 5, rotation=180)])
+    assert ops[0][1] == [(6, 5, 10, 5)]                       # rotated: body points left
+    assert bk.trim_ops(p, [wire], [m.BlockRef("F", 10, 5)]) == []   # wire already ends on the slot
+    assert bk.trim_ops(p, [wire], [m.BlockRef("F", 6, 5, rotation=90)]) == []   # body square to the wire
+
+
+def test_goto_numbers_and_duplicates():
+    from electro import numbering as nb
+    p = m.Project("g")
+    sheets = [p.add_sheet(m.Sheet(i)) for i in (1, 2, 3, 4, 5)]
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    for sh in sheets:
+        ln = m.Line(0, 5, 2, 5, m.Style("W")); ln.number = m.WireNumber("override", "02041")
+        sh.entities.append(ln)
+    rep = nb.update(p)
+    assert [v for v, _ in rep.duplicates] == ["02041"] and len(rep.duplicates[0][1]) == 5
+    plan = nb.goto_duplicates(p, rep.duplicates)
+    assert [(pg, n.value) for pg, _, n in plan] == [(1, "02041-1"), (2, "02041-1"), (3, "02041-2"), (4, "02041-2"),
+                                                    (5, "02041-3")]          # pairs are sets; the odd one is alone
+    for pg, lines, num in plan:
+        for l in lines:
+            l.number = num
+    r2 = nb.update(p)
+    assert r2.duplicates == [] and not r2.warnings                            # a set is not a duplicate
+    # tie a wire to a plain-numbered one: both ends take NUMBER-1; the next set is NUMBER-2
+    q = m.Project("h"); ts = [q.add_sheet(m.Sheet(i)) for i in (1, 2, 3, 4)]
+    q.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    x = m.Line(0, 5, 2, 5, m.Style("W")); x.number = m.WireNumber("override", "7")
+    y = m.Line(0, 5, 2, 5, m.Style("W"))
+    x2 = m.Line(0, 5, 2, 5, m.Style("W")); x2.number = m.WireNumber("override", "7")
+    y2 = m.Line(0, 5, 2, 5, m.Style("W"))
+    for sh, ln in zip(ts, (x, y, x2, y2)):
+        sh.entities.append(ln)
+    plan = nb.goto_plan(q, {y.id}, x.id)
+    assert [(pg, n.value, n.mode) for pg, _, n in plan] == [(1, "7-1", "goto"), (2, "7-1", "goto")]
+    for pg, lines, num in plan:
+        for l in lines:
+            l.number = num
+    plan = nb.goto_plan(q, {y2.id}, x2.id)                                    # another set of 7
+    assert [(pg, n.value) for pg, _, n in plan] == [(3, "7-2"), (4, "7-2")]
+    for pg, lines, num in plan:
+        for l in lines:
+            l.number = num
+    z = m.Line(0, 3, 2, 3, m.Style("W")); ts[3].entities.append(z)
+    plan = nb.goto_plan(q, {z.id}, x.id)                                      # picked wire is already in set 7-1
+    assert [(pg, n.value) for pg, _, n in plan] == [(4, "7-1")]

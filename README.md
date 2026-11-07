@@ -146,3 +146,19 @@ A placed block now counts with its real extent (graphics + slots, rotated / mirr
 ## 0.10.1
 - **Blocks bring their layers:** making or applying a block records the definition (colour, linetype, weight) of every layer its graphics use, saved in the library file. Placing a block, or updating from the library, adds any layer the project lacks; a layer with no stored definition (older blocks) is added as a plain default layer. To give an older block its dashed look, open it (Edit block geometry) in a project that has the layer and Apply.
 - **Closing a block tab:** the close button now shows on block-edit tabs (it was being removed); Library > Close block edit tab does the same. Unsaved changes ask Save / Discard / Cancel.
+
+## 0.10.2: GOTO connectors
+- Library > Add off-page connector block now adds **GOTO From** (wire at the flat back of the arrow, cross-reference inside the shape) and **GOTO To** (wire at the tip, no text, since the wire number says where it goes). Place one at each end, same name. Rotate / mirror (Ctrl+R / Ctrl+M) to suit the wire direction.
+- New label position **Inside the part (small)**: small centred text inside the graphics.
+- A label line with a blank value (hidden, or no tag yet) now draws nothing instead of showing `{tag}`.
+- Each connector has one slot: it is the attachment point that trims the wire and joins the wire to its other end. Its terminal name is blank, so no number is drawn under it.
+- Existing `GOTO` blocks are not changed; delete them and add the new pair, or set the label to Inside via Block data.
+
+## 0.10.3
+- A part with a single slot (the GOTO connectors) now trims the wire: the wire is cut at the slot and the piece under the symbol (the body side) is removed. Works when placing, and after moving the part. A wire that already ends on the slot, or runs square to the body, is left alone. Rotate / mirror the part to choose which side is removed.
+
+## 0.10.4: GOTO follow-ups
+- Library > Add off-page connector block adds **From** and **To** in a library folder **GOTO**. **To** is already turned 180 degrees (tip on the slot, body to the left).
+- **Duplicate numbers:** Update wire numbers lists numbers used by more than one wire and asks whether to apply a goto. Wires are taken two at a time (sheet / position order): the first pair is a set, NUMBER-1 on both ends, the next pair NUMBER-2 ... A leftover wire gets its own number. Gotos are never reported as duplicates.
+- **Wire number dialog:** `Ignore` is gone (Clear remains). New **Goto**: pick another numbered wire from a list; both wires become NUMBER-1 (the first set of that number); tying another pair to the same number makes NUMBER-2 on both ends. Picking a wire that is already in a set joins that set. Works on any sheet, as undoable edits.
+- The border and title block ignore the mouse: no hover colour, nothing to select or delete.

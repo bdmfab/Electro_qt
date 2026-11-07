@@ -106,14 +106,21 @@ def ensure_layers(project: m.Project, blk: m.BlockDef) -> list:
     return added
 
 
-def default_connector_block() -> m.BlockDef:
-    """A ready-made off-page connector: a small flag on one slot, labelled with its name and
-    where the other end is."""
-    pts = [(0, 0), (0.12, 0.1), (0.4, 0.1), (0.4, -0.1), (0.12, -0.1)]
+def default_connector_block(kind="from") -> m.BlockDef:
+    """Ready-made off-page connectors, one slot each (the wire attaches there). 'GOTO From':
+    wire at the flat back of the arrow, shows the cross-reference inside. 'GOTO To': wire at
+    the tip (front), no text (the wire number already says where it goes). Rotate / mirror when
+    placing to suit the wire direction."""
+    if kind == "from":
+        pts = [(0, 0.1), (0.38, 0.1), (0.5, 0), (0.38, -0.1), (0, -0.1)]
+        name, lines = "From", ("xref",)
+    else:
+        pts = [(0, 0), (-0.12, 0.1), (-0.5, 0.1), (-0.5, -0.1), (-0.12, -0.1)]    # turned 180: body on the left
+        name, lines = "To", ()
     ents = [m.Line(*pts[i], *pts[(i + 1) % 5], m.Style("0")) for i in range(5)]
-    ents.append(m.SlotMark(0, 0, "1"))
-    return make_block("GOTO", ents, (0, 0), ("tag", "xref"), "above", description="Off-page connector",
-                      connector=1, poles=1)
+    ents.append(m.SlotMark(0, 0, ""))
+    return make_block(name, ents, (0, 0), lines, "center", description="Off-page connector " + kind,
+                      connector=1, poles=1, folder="GOTO")
 
 
 def block_context(project: m.Project, sheet: m.Sheet, block: m.BlockDef, ref: m.BlockRef) -> dict:
@@ -137,6 +144,7 @@ def resolved_entities(project, sheet, block, ref):
     for t in leaves(ents):
         if isinstance(t, m.Text):
             t.resolved = "" if t.source in hidden else fields.resolve(t.source, ctx)
+            t.hidden = t.resolved == "" and t.source != ""       # blank value: draw nothing (not the {code})
     return ents
 
 
@@ -190,6 +198,12 @@ def rebuild_label(block: m.BlockDef, lines, pos="above"):
     if not lines:
         return
     bb = bounds(block.entities) or (0.0, 0.0, 0.0, 0.0)
+    if pos == "center":                                   # small text inside the part, centred
+        cx, cy, n = (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2, len(lines)
+        for k, key in enumerate(lines):
+            block.entities.append(m.Text(cx, cy + (n - 1) * 0.045 - 0.035 - k * 0.09, "{" + key + "}", "", 0.07, 0.0,
+                                         m.Style("0"), align="center"))
+        return
     xs, ys = [bb[0], bb[2]], [bb[1], bb[3]]
     for s in block.slots:
         xs.append(s.x); ys.append(s.y)
@@ -348,6 +362,48 @@ def paste_on_wire(lines, points, tol=1e-4):
             pieces.append((p1[0], p1[1], ln.x2, ln.y2))
         ops.append((ln, pieces))
     return ops
+
+
+def trim_single(lines, point, body, tol=1e-4):
+    """A part with one slot (an off-page connector): a wire running through the slot is cut
+    there, and the part of it on the side of the part's body is removed. Wires that only end
+    on the slot, or run square to the body, are left alone. Same result shape as paste_on_wire."""
+    ops = []
+    px, py = point
+    for ln in lines:
+        dx, dy = ln.x2 - ln.x1, ln.y2 - ln.y1
+        L = math.hypot(dx, dy)
+        if L < 1e-9:
+            continue
+        t = ((px - ln.x1) * dx + (py - ln.y1) * dy) / (L * L)
+        dist = abs((px - ln.x1) * dy - (py - ln.y1) * dx) / L
+        if dist > tol or not (tol / L < t < 1 - tol / L):
+            continue
+        side = ((body[0] - px) * dx + (body[1] - py) * dy) / L
+        if side > 1e-6:
+            ops.append((ln, [(ln.x1, ln.y1, px, py)]))
+        elif side < -1e-6:
+            ops.append((ln, [(px, py, ln.x2, ln.y2)]))
+    return ops
+
+
+def trim_ops(project, wires, refs):
+    """Wire trimming for placed parts: parts with two or more slots remove the wire between
+    their slots, one-slot parts cut the wire at the slot on the body side."""
+    multi, ops = [], []
+    for r in refs:
+        blk = project.blocks.get(r.block)
+        if blk is None:
+            continue
+        pts = [w for _, w in block_slots(blk, r)]
+        if len(pts) == 1:
+            gfx = [e for e in leaves(block_entities(blk, r)) if not isinstance(e, m.Text)]
+            bb = bounds(gfx)
+            if bb:
+                ops += trim_single(wires, pts[0], ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2))
+        else:
+            multi += pts
+    return ops + (paste_on_wire(wires, multi) if multi else [])
 
 
 def follow_plan(project, sheet, refs, dx, dy, moved_ids=(), tol=1e-4):

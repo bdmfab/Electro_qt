@@ -177,7 +177,7 @@ class TextItem(_Common, QGraphicsPathItem):
         super().__init__()
         font = QFont(e.font or "Sans Serif"); font.setPixelSize(100)
         fm = QFontMetricsF(font)
-        lines = (e.resolved or e.source).split("\n")
+        lines = ("" if getattr(e, "hidden", False) else (e.resolved or e.source)).split("\n")
         width = max((fm.horizontalAdvance(s) for s in lines), default=0.0)
         path = QPainterPath()
         for i, s in enumerate(lines):

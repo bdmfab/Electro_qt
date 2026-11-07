@@ -19,6 +19,7 @@ Layer scheme variables: <page> <zone> <col> <incident> <g_incident> <phase_incid
 """
 from __future__ import annotations
 import math
+import re
 from dataclasses import dataclass, field
 from . import model as m
 from .blocks import block_slots
@@ -286,6 +287,7 @@ def default_start(project, layer_name) -> int:
 class Report:
     changes: dict = field(default_factory=dict)     # sheet page -> [(line, WireNumber)]
     warnings: list = field(default_factory=list)
+    duplicates: list = field(default_factory=list)   # [(number, [(page, Net), ...])] genuine repeats
     numbered: int = 0
     nets: int = 0
 
@@ -421,7 +423,10 @@ def update(project) -> Report:
             seen.setdefault(n.value, []).append((pg, n))
     for val, lst in sorted(seen.items()):
         distinct = {group_of.get(id(n), id(n)) for _, n in lst}
+        if all(n.fixed and n.mode == "goto" for _, n in lst):
+            continue                                     # wires tied together with a goto: not a duplicate
         if len(distinct) > 1 and val:
+            rep.duplicates.append((val, sorted(lst, key=lambda t: (t[0], t[1].anchor[0], -t[1].anchor[1]))))
             where = ", ".join(f"{pg:02d}/{zone_of(project.sheets[pg], *n.anchor):02d}" for pg, n in lst)
             rep.warnings.append(f"Number {val} is used more than once (sheet/zone: {where})")
     return rep
@@ -434,6 +439,78 @@ def apply(project, report: Report) -> int:
             line.number = num
             n += 1
     return n
+
+
+# ---------------------------------------------------------------- gotos
+def _net_value(net):
+    nums = [l.number for l in net.lines if l.number is not None and l.number.value]
+    return (nums[0].value, nums[0].mode) if nums else ("", "auto")
+
+
+def numbered_nets(project):
+    """[(page, Net, value)] for every wire that currently carries a number, pages in order."""
+    out = []
+    for pg in sorted(project.sheets):
+        for n in build_nets(project, project.sheets[pg]):
+            v, _ = _net_value(n)
+            if v:
+                out.append((pg, n, v))
+    return out
+
+
+def goto_names(value, taken_values=()):
+    """Split 'BASE-2' -> ('BASE', 2); a plain number -> (number, 0)."""
+    mt = re.match(r"^(.*)-(\d+)$", value)
+    return (mt.group(1), int(mt.group(2))) if mt else (value, 0)
+
+
+def _next_goto(project, base):
+    """Next free set number for a base number: after the highest NUMBER-k already used."""
+    return 1 + max([goto_names(v)[1] for _, _, v in numbered_nets(project) if goto_names(v)[0] == base] + [0])
+
+
+def goto_plan(project, this_line_ids, other_line_id):
+    """Tie two wires together with a goto: a set. Both ends take the picked wire's number with
+    -k added, k = 1 for the first set of that number, 2 for the next set ... If the picked wire
+    is already in a set, this wire joins it (same NUMBER-k). -> [(page, [lines], WireNumber)]
+    or None when the picked wire has no number."""
+    this = other = None
+    this_ids = set(this_line_ids)
+    for pg in sorted(project.sheets):
+        for n in build_nets(project, project.sheets[pg], include=this_ids | {other_line_id}):
+            ids = {l.id for l in n.lines}
+            if ids & this_ids and this is None:
+                this = (pg, n)
+            if other_line_id in ids and other is None:
+                other = (pg, n)
+    if this is None or other is None or this[1] is other[1]:
+        return None
+    val, mode = _net_value(other[1])
+    if not val:
+        return None
+    plan = []
+    if mode == "goto" and goto_names(val)[1]:
+        new = val                                        # join the existing set
+    else:
+        new = f"{val}-{_next_goto(project, val)}"
+        plan.append((other[0], other[1].lines, m.WireNumber("goto", new)))
+    plan.append((this[0], this[1].lines, m.WireNumber("goto", new)))
+    return plan
+
+
+def goto_duplicates(project, duplicates):
+    """Resolve the duplicates a report found. The wires sharing a number are taken two at a
+    time, in sheet / position order: the first pair is a set NUMBER-1 (both ends), the next pair
+    NUMBER-2 ... A wire left over on its own gets the next number by itself.
+    -> [(page, [lines], WireNumber)]."""
+    plan = []
+    for val, members in duplicates:
+        k = _next_goto(project, val) - 1
+        for i in range(0, len(members), 2):
+            k += 1
+            for pg, net in members[i:i + 2]:
+                plan.append((pg, net.lines, m.WireNumber("goto", f"{val}-{k}")))
+    return plan
 
 
 # ---------------------------------------------------------------- label placement

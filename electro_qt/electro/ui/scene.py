@@ -56,6 +56,7 @@ class EditorScene(QGraphicsScene):
     def __init__(self, project: m.Project, sheet: m.Sheet, parent=None):
         super().__init__(parent)
         self.project, self.sheet = project, sheet
+        self.scene_for_page = None       # set by the main window: page -> that sheet's scene
         self.block_edit = None          # {"name": ...} when this tab is editing a block's geometry
         self.undo = QUndoStack(self)
         self._label_items = []
@@ -133,6 +134,13 @@ class EditorScene(QGraphicsScene):
     def layers(self):
         return self.project.layers
 
+    @staticmethod
+    def _strip_ids(it):
+        if hasattr(it, "entity_id"):
+            del it.entity_id
+        for c in it.childItems():
+            EditorScene._strip_ids(c)
+
     def rebuild(self):
         fields.refresh_project(self.project)         # {job}, {page}, ... in text
         self.clear(); self._items.clear()
@@ -145,6 +153,7 @@ class EditorScene(QGraphicsScene):
             it.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
             it.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
             it.setZValue(-5)
+            self._strip_ids(it)                      # border / title block: nothing to hover, pick or delete
             self.addItem(it)
         self._add_logo()
         for e in self.sheet.entities:
@@ -793,7 +802,7 @@ class EditorScene(QGraphicsScene):
         wires = [l for l in self.sheet.entities if isinstance(l, m.Line)
                  and self.layers.get(l.style.layer) is not None and self.layers[l.style.layer].kind == "wire"]
         mods, adds, rems = [], [ref], []
-        for ln, pieces in bk.paste_on_wire(wires, points):
+        for ln, pieces in bk.trim_ops(self.project, wires, [ref]):
             if not pieces:
                 rems.append(ln); continue
             fields_ = dict(zip(("x1", "y1", "x2", "y2"), pieces[0]))
@@ -858,10 +867,25 @@ class EditorScene(QGraphicsScene):
             return
         from .numdlg import WireNumberDialog
         cur = wires[0].number or m.WireNumber("auto", "")
-        dlg = WireNumberDialog(QApplication.activeWindow(), cur.mode, cur.value)
+        mine = {w.id for w in wires}
+        others = []
+        for pg, net, val in nb.numbered_nets(self.project):
+            if not ({l.id for l in net.lines} & mine):
+                others.append((f"{val}   (sheet {pg:02d}, zone {bk.zone_text(self.project.sheets[pg], *net.anchor)})",
+                               net.lines[0].id))
+        dlg = WireNumberDialog(QApplication.activeWindow(), cur.mode, cur.value, others)
         if not dlg.exec():
             return
-        mode, value = dlg.values()
+        mode, value, link = dlg.values()
+        if mode == "goto":
+            plan = nb.goto_plan(self.project, mine, link)
+            if plan is None:
+                return
+            for pg, lines, num in plan:
+                sc = self if pg == self.sheet.page else (self.scene_for_page(pg) if self.scene_for_page else None)
+                if sc is not None:
+                    sc.undo.push(EditCmd(sc, "Goto", modify=[(l, {"number": num}) for l in lines]))
+            return
         ids = {id(w) for w in wires}
         mods = []
         for net in nb.build_nets(self.project, self.sheet, include={w.id for w in wires}):
@@ -1066,15 +1090,10 @@ class EditorScene(QGraphicsScene):
 
     def _trim_wires_at(self, refs, skip):
         """After a move: wires that now run through a block's slots are trimmed to them."""
-        points = []
-        for r in refs:
-            blk = self.project.blocks.get(r.block)
-            if blk is not None:
-                points += [w for _, w in bk.block_slots(blk, r)]
         wires = [l for l in self.sheet.entities if isinstance(l, m.Line) and id(l) not in skip
                  and self.layers.get(l.style.layer) is not None and self.layers[l.style.layer].kind == "wire"]
         mods, adds, rems = [], [], []
-        for ln, pieces in bk.paste_on_wire(wires, points):
+        for ln, pieces in bk.trim_ops(self.project, wires, refs):
             if not pieces:
                 rems.append(ln); continue
             mods.append((ln, dict(zip(("x1", "y1", "x2", "y2"), pieces[0]))))

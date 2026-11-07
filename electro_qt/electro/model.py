@@ -20,11 +20,11 @@ def page_str(page: int) -> str:
 # ---------------------------------------------------------------- entities
 @dataclass
 class WireNumber:
-    mode: str = "auto"          # auto | override | locked | ignore
+    mode: str = "auto"          # auto | override | locked | ignore | goto
     value: str = ""
 
     def __post_init__(self):
-        if self.mode not in ("auto", "override", "locked", "ignore"):
+        if self.mode not in ("auto", "override", "locked", "ignore", "goto"):
             raise ValueError(f"bad wire number mode {self.mode!r}")
 
 
