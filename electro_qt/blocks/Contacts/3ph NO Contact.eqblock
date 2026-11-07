@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="3ph NO Contact" description="Desc" part_number="" tag_prefix="CON" hyperlink="" manufacturer="" increment="1" prefix_rule="" poles="3" label_pos="above" folder="Contacts" terminal_text_editable="0">
+  <entities>
+    <line x1="0.0875" y1="0.0875" x2="0.0875" y2="-0.0875" id="03c44887-4144-41f8-8ca1-f24a88497b97" layer="0" />
+    <line x1="0.2625" y1="0.0875" x2="0.2625" y2="-0.0875" id="45245b06-d925-40e1-aa73-43271dbcabb2" layer="0" />
+    <line x1="0.0875" y1="0.0" x2="0.0" y2="0.0" id="886c2e76-4a8b-4376-9264-29cee05dd440" layer="0" />
+    <line x1="0.2625" y1="0.0" x2="0.35" y2="0.0" id="9ce8b041-9acd-4129-88ad-a24d7260684a" layer="0" />
+    <line x1="0.0875" y1="-0.2625" x2="0.0875" y2="-0.4375" id="7b365ae0-ffbe-4f89-92c3-95d149668e7b" layer="0" />
+    <line x1="0.2625" y1="-0.2625" x2="0.2625" y2="-0.4375" id="47122944-9880-4d1c-ad6d-128742782ef7" layer="0" />
+    <line x1="0.0875" y1="-0.35" x2="0.0" y2="-0.35" id="af26f5b1-1b21-446e-ae61-4c59734d2638" layer="0" />
+    <line x1="0.2625" y1="-0.35" x2="0.35" y2="-0.35" id="4c5eac4d-ffd7-479a-8690-e06b3af5bceb" layer="0" />
+    <line x1="0.0875" y1="-0.6125" x2="0.0875" y2="-0.7875" id="86a39821-fcd5-4d3a-9752-8971bf880f67" layer="0" />
+    <line x1="0.2625" y1="-0.6125" x2="0.2625" y2="-0.7875" id="e0fcb9c0-6660-422c-849b-8ff6bb240e34" layer="0" />
+    <line x1="0.0875" y1="-0.7" x2="0.0" y2="-0.7" id="aaec1dc5-ea2e-446a-b12e-c3061d6722a4" layer="0" />
+    <line x1="0.2625" y1="-0.7" x2="0.35" y2="-0.7" id="da347bcd-ad55-4682-bb93-f110a2a666f6" layer="0" />
+    <text x="0.175" y="0.1875" height="0.1" rotation="0.0" id="311476e7-77da-433a-a609-3797e3e53d4d" align="center" tstyle="Default" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.175" y="0.34750000000000003" height="0.1" rotation="0.0" id="bef83b2a-01e1-48c2-b75c-daaceb045666" align="center" tstyle="Default" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.35" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="3" x="0.0" y="-0.35" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="4" x="0.35" y="-0.35" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="5" x="0.0" y="-0.7" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="6" x="0.35" y="-0.7" num_dx="0.0" num_dy="0.0" />
+</block>

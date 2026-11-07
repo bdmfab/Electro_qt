@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="3ph Breaker" description="Desc" part_number="xxxx" tag_prefix="CB" hyperlink="" manufacturer="" increment="1" prefix_rule="" poles="3" label_pos="above" folder="Circuit Protection" terminal_text_editable="0">
+  <entities>
+    <line x1="0.0875" y1="0.0" x2="0.0" y2="0.0" id="05a98264-4d9a-40ca-a10d-8dd729cf8e6a" layer="0" />
+    <line x1="0.2625" y1="0.0" x2="0.35" y2="0.0" id="02d6e0bc-972c-4166-9f2c-e26dc9ef9faa" layer="0" />
+    <line x1="0.0875" y1="-0.35" x2="0.0" y2="-0.35" id="54a560a1-b8b8-44b4-b87c-6ce80dfef67e" layer="0" />
+    <line x1="0.2625" y1="-0.35" x2="0.35" y2="-0.35" id="e9ef2223-5d11-4544-aa5f-12c8d977257d" layer="0" />
+    <line x1="0.0875" y1="-0.7" x2="0.0" y2="-0.7" id="3e4ade91-0575-46ae-9aad-72fccdb73d5e" layer="0" />
+    <line x1="0.2625" y1="-0.7" x2="0.35" y2="-0.7" id="f7cb69f3-4aae-4501-b222-33ab262aa2ba" layer="0" />
+    <arc cx="0.17499999999999982" cy="-0.22567468095098597" r="0.34999999999999964" start="60.000000000000036" end="119.99999999999997" id="dc34c5b1-7eb3-4a6c-ae88-127c82a37406" layer="0" />
+    <arc cx="0.17499999999999982" cy="-0.5756746809509856" r="0.34999999999999964" start="60.000000000000036" end="119.99999999999997" id="c96e6079-a5e2-4d0a-bfe8-6faff3c68cda" layer="0" />
+    <arc cx="0.17499999999999982" cy="-0.9256746809509862" r="0.34999999999999964" start="60.000000000000036" end="119.99999999999997" id="d989fe27-bd13-4ae4-bf70-b32c3398d979" layer="0" />
+    <line x1="0.175" y1="0.124325319" x2="0.175" y2="-0.575674681" id="d93b1005-c950-4dba-b8b2-2f78329625fc" layer="Dashed" />
+    <text x="0.175" y="0.22432531904901368" height="0.1" rotation="0.0" id="451aca0c-b4a6-4001-bce2-451094f7b5de" align="center" tstyle="Default" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.175" y="0.3843253190490137" height="0.1" rotation="0.0" id="281d7dbb-dc55-4b08-9d30-f0c83efefffd" align="center" tstyle="Default" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.175" y="0.5443253190490137" height="0.1" rotation="0.0" id="de20aef2-739c-4cd6-92f3-1d744d30cfad" align="center" tstyle="Default" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.35" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="3" x="0.0" y="-0.35" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="4" x="0.35" y="-0.35" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="5" x="0.0" y="-0.7" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="6" x="0.35" y="-0.7" num_dx="0.0" num_dy="0.0" />
+</block>

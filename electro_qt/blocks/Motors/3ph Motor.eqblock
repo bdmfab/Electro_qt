@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="3ph Motor" description="Desc" part_number="xxxx" tag_prefix="MOT" hyperlink="" manufacturer="" increment="0" prefix_rule="motor" poles="3" label_pos="above" folder="Motors" terminal_text_editable="0">
+  <entities>
+    <circle cx="0.6999999999999993" cy="-0.34999999999999964" r="0.3500000000000014" id="f3f856e7-7a4a-4dce-9467-b2e631d02da6" filled="0" layer="0" />
+    <line x1="0.452512627" y1="-0.102512627" x2="0.35" y2="0.0" id="e70280c9-2d42-4fe3-96b9-0d09e4b3ed38" layer="0" />
+    <line x1="0.35" y1="0.0" x2="0.0" y2="0.0" id="1e5fe268-5d58-4512-851b-dc9262b21be1" layer="0" />
+    <line x1="0.35" y1="-0.35" x2="0.0" y2="-0.35" id="737d7dab-1054-4629-ad94-7f0f59c78238" layer="0" />
+    <line x1="0.452512627" y1="-0.597487373" x2="0.35" y2="-0.7" id="c073649e-44ae-44f4-a56e-3b94658922d9" layer="0" />
+    <line x1="0.35" y1="-0.7" x2="0.0" y2="-0.7" id="99e19f0d-b9e6-4601-bde0-e4c81318efba" layer="0" />
+    <text x="0.625718686615123" y="-0.40447296314890835" resolved="M" height="0.12" rotation="0.0" id="758efabc-9e32-4b53-a7f5-68a877c1d416" align="left" tstyle="Default" layer="0">
+      <source>M</source>
+    </text>
+    <text x="0.5250000000000004" y="0.10000000000000178" height="0.1" rotation="0.0" id="19fc56fc-c685-4cab-ad6d-cc9073ed2348" align="center" tstyle="Default" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.5250000000000004" y="0.2600000000000018" height="0.1" rotation="0.0" id="beb7471c-7a36-407a-8ec9-8644f092b76a" align="center" tstyle="Default" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.5250000000000004" y="0.4200000000000018" height="0.1" rotation="0.0" id="33e2d542-1b5e-44a4-a512-e54032c95552" align="center" tstyle="Default" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.0" y="-0.35" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="3" x="0.0" y="-0.7" num_dx="0.0" num_dy="0.0" />
+</block>

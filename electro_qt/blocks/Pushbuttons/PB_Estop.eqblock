@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="PB_Estop" description="Desc" part_number="" tag_prefix="ESPB" hyperlink="" manufacturer="" increment="1" connector="0" prefix_rule="" poles="2" label_pos="above" folder="Pushbuttons" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <blocklayer name="Dashed" color="7" kind="graphics" numbered="0" scheme="" linetype="dashed" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="0.0" y1="0.0" x2="0.0875" y2="0.0" id="e4357672-8e4b-4c83-ad28-47224e1243f0" layer="0" />
+    <line x1="0.35" y1="0.0" x2="0.2625" y2="0.0" id="5b6f002e-735e-4707-91a4-1e5cd9025a57" layer="0" />
+    <line x1="0.0875" y1="0.0" x2="0.268688332" y2="-0.040492878" id="9e82f7f8-28f3-4b06-8375-9831189cde38" layer="0" />
+    <line x1="0.2625" y1="0.0" x2="0.2625" y2="-0.047815256" id="f8292c7a-8b65-4a4a-bd66-1a52b7cc67be" layer="0" />
+    <line x1="0.0" y1="-1.05" x2="0.0875" y2="-1.05" id="36558583-d5ab-4bfc-b071-5b17c5b6d7ba" layer="0" />
+    <line x1="0.35" y1="-1.05" x2="0.2625" y2="-1.05" id="38db7ecb-7417-42a1-99d2-d2c66255d2ca" layer="0" />
+    <line x1="0.0875" y1="-1.05" x2="0.268688332" y2="-1.090492878" id="6500752c-0575-462e-823b-feba2d435575" layer="0" />
+    <line x1="0.2625" y1="-1.05" x2="0.2625" y2="-1.097815256" id="32846d35-9ddc-4817-a900-aba4f8cd8b64" layer="0" />
+    <arc cx="0.17499999999999982" cy="-0.34999999999999964" r="0.5250000000000004" start="70.52877936550935" end="109.47122063449065" id="7e5decc0-70de-466b-9312-cc74b88c3089" layer="0" />
+    <line x1="0.178094166" y1="-0.020246439" x2="0.178094166" y2="0.175" id="a9a7875f-c50b-4c64-a8fa-5ca5f9aeca08" layer="0" />
+    <line x1="0.178094166" y1="-0.020246439" x2="0.178094166" y2="-1.070246439" id="61da2020-172a-4429-80ed-d8f90797de4a" layer="Dashed" />
+    <text x="0.175" y="0.2750000000000007" height="0.1" rotation="0.0" id="2c006795-66a9-438c-8c58-9b60ffe46eec" align="center" tstyle="Default" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.175" y="0.4350000000000007" height="0.1" rotation="0.0" id="cb2d22d7-4734-4a80-822d-f9e96b5e4322" align="center" tstyle="Default" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.175" y="0.5950000000000008" height="0.1" rotation="0.0" id="aac40523-4981-4ca7-96ff-b101f5fa789e" align="center" tstyle="Default" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.35" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="3" x="0.0" y="-1.05" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="4" x="0.35" y="-1.05" num_dx="0.0" num_dy="0.0" />
+</block>

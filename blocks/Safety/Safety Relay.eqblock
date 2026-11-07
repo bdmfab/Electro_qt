@@ -1,0 +1,123 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="Safety Relay" description="Desc" part_number="1234-56" tag_prefix="SR" hyperlink="" manufacturer="" increment="0" prefix_rule="" poles="1" label_pos="above" folder="Safety" terminal_text_editable="0">
+  <entities>
+    <circle cx="0.2624999999999993" cy="0.0" r="0.06" id="7561cb53-899f-44c4-a55a-86890f1ba262" filled="0" layer="grey" />
+    <text x="1.2254137057523957" y="-0.04730233990018995" resolved="A2" height="0.1" rotation="0.0" id="ee4364ce-e52e-47c7-b884-3a4c41eec60e" font="Ubuntu" align="right" tstyle="Right" layer="0">
+      <source>A2</source>
+    </text>
+    <text x="0.36243776883178214" y="-0.04258783310845615" resolved="A1" height="0.1" rotation="0.0" id="cf6262a8-7437-49b8-8f97-957d24b5139e" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>A1</source>
+    </text>
+    <circle cx="1.3124999999999991" cy="0.0" r="0.06" id="241ce4b7-828a-4000-b5eb-a5c1a1a2a0ab" filled="0" layer="grey" />
+    <circle cx="0.2624999999999993" cy="-0.6999999999999993" r="0.06" id="d6cb5b64-b206-4cff-9a9d-cf5fca6571e2" filled="0" layer="grey" />
+    <text x="0.36243776883178214" y="-0.7425878331084554" resolved="S11" height="0.1" rotation="0.0" id="fb319c3f-ad78-4a11-8f1b-1eabb1588498" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>S11</source>
+    </text>
+    <circle cx="0.2624999999999993" cy="-1.0500000000000007" r="0.06" id="9408776b-ac71-47aa-972d-f30b6ec6f709" filled="0" layer="grey" />
+    <text x="0.36243776883178214" y="-1.0925878331084569" resolved="S12" height="0.1" rotation="0.0" id="db0f1a97-101a-4524-966f-c4281344de43" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>S12</source>
+    </text>
+    <text x="1.2254137057523957" y="-1.4473023399001903" resolved="S33" height="0.1" rotation="0.0" id="1e377a8f-adc5-49a4-8ed9-9e133f7bdb4a" font="Ubuntu" align="right" tstyle="Right" layer="0">
+      <source>S33</source>
+    </text>
+    <circle cx="1.3124999999999991" cy="-1.4000000000000004" r="0.06" id="d25db3c3-7a32-432e-9991-226f52933863" filled="0" layer="grey" />
+    <circle cx="0.2624999999999993" cy="-1.75" r="0.06" id="a4d9c30f-0206-435b-8718-82f05534b0fc" filled="0" layer="grey" />
+    <text x="0.36243776883178214" y="-1.7925878331084562" resolved="S21" height="0.1" rotation="0.0" id="dd92e8a7-767d-4a33-adb9-b66d3d3d01a1" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>S21</source>
+    </text>
+    <circle cx="0.2624999999999993" cy="-2.0999999999999996" r="0.06" id="4e9e3aad-e3e3-4899-a8a4-49e222bfaa20" filled="0" layer="grey" />
+    <text x="0.36243776883178214" y="-2.142587833108456" resolved="S22" height="0.1" rotation="0.0" id="eb1fd71c-91ef-437f-9d54-675cc0ba89f5" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>S22</source>
+    </text>
+    <text x="1.2254137057523957" y="-2.4973023399001892" resolved="S34" height="0.1" rotation="0.0" id="f51d447c-212f-4362-bfdf-e810dbfeed45" font="Ubuntu" align="right" tstyle="Right" layer="0">
+      <source>S34</source>
+    </text>
+    <circle cx="1.3124999999999991" cy="-2.4499999999999993" r="0.06" id="3c378636-5c90-4028-8c1a-e3bf67fc33ad" filled="0" layer="grey" />
+    <circle cx="0.2624999999999993" cy="-2.8" r="0.06" id="78e5e9da-517e-4381-b175-4b849f7f0c72" filled="0" layer="grey" />
+    <text x="1.2254137057523957" y="-2.8473023399001898" resolved="42" height="0.1" rotation="0.0" id="f531747b-7a29-4baf-a9e1-441b00109b4e" font="Ubuntu" align="right" tstyle="Right" layer="0">
+      <source>42</source>
+    </text>
+    <text x="0.36243776883178214" y="-2.842587833108456" resolved="41" height="0.1" rotation="0.0" id="3d3b7c09-07fe-4bc9-89e4-a19c25f56374" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>41</source>
+    </text>
+    <circle cx="1.3124999999999991" cy="-2.8" r="0.06" id="3075ba47-b70b-446c-ab23-35ae6c9c3fb6" filled="0" layer="grey" />
+    <circle cx="0.2624999999999993" cy="-3.1500000000000004" r="0.06" id="db11e9f1-853f-4816-9541-be61e0dd188b" filled="0" layer="grey" />
+    <text x="1.2254137057523957" y="-3.1973023399001903" resolved="14" height="0.1" rotation="0.0" id="f66d88bd-beb2-4407-9879-47919d05bcae" font="Ubuntu" align="right" tstyle="Right" layer="0">
+      <source>14</source>
+    </text>
+    <text x="0.36243776883178214" y="-3.1925878331084565" resolved="13" height="0.1" rotation="0.0" id="ba7141e5-e9b9-4fbf-adba-7e0af856b3bd" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>13</source>
+    </text>
+    <circle cx="1.3124999999999991" cy="-3.1500000000000004" r="0.06" id="7b118d05-a303-4c4c-8d95-8b14663a644f" filled="0" layer="grey" />
+    <circle cx="0.2624999999999993" cy="-3.5" r="0.06" id="0053e3de-7f1a-4c98-8387-18a9b9b04499" filled="0" layer="grey" />
+    <text x="1.2254137057523957" y="-3.54730233990019" resolved="24" height="0.1" rotation="0.0" id="401022c4-4150-47a0-917a-2c394dbec4f5" font="Ubuntu" align="right" tstyle="Right" layer="0">
+      <source>24</source>
+    </text>
+    <text x="0.36243776883178214" y="-3.542587833108456" resolved="23" height="0.1" rotation="0.0" id="4fddd22e-bb9a-4dc9-9c14-0fcdf3f069e5" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>23</source>
+    </text>
+    <circle cx="1.3124999999999991" cy="-3.5" r="0.06" id="a421130b-6790-4596-8c19-a983293c95fd" filled="0" layer="grey" />
+    <circle cx="0.2624999999999993" cy="-3.8499999999999996" r="0.06" id="b5833671-58fb-43bb-9222-5617d7ca1521" filled="0" layer="grey" />
+    <text x="1.2254137057523957" y="-3.8973023399001896" resolved="34" height="0.1" rotation="0.0" id="b6a2fb17-3a0b-43c0-852e-7f4e88d0e689" font="Ubuntu" align="right" tstyle="Right" layer="0">
+      <source>34</source>
+    </text>
+    <text x="0.36243776883178214" y="-3.892587833108456" resolved="33" height="0.1" rotation="0.0" id="27defb0d-c025-4a89-b176-18c379c4d2f5" font="Ubuntu" align="left" tstyle="Left" layer="0">
+      <source>33</source>
+    </text>
+    <circle cx="1.3124999999999991" cy="-3.8499999999999996" r="0.06" id="eda29b32-56f3-4866-8879-5cb2fe0bc7bf" filled="0" layer="grey" />
+    <line x1="0.6125" y1="-2.8" x2="0.511420115" y2="-2.8" id="22209961-d1f9-4d8b-a2a9-0819af25d816" layer="grey" />
+    <line x1="0.9625" y1="-2.8" x2="1.062685947" y2="-2.8" id="5375acb4-e1d1-46ce-8f75-a106afaaaa12" layer="grey" />
+    <line x1="0.6125" y1="-2.8" x2="0.712976685" y2="-2.8" id="0b644692-da2c-47b0-a460-cc4a41059411" layer="grey" />
+    <line x1="0.9625" y1="-2.8" x2="0.861129377" y2="-2.8" id="993c62ff-803f-4156-84f7-b0a14583b9b0" layer="grey" />
+    <line x1="0.712976685" y1="-2.8" x2="0.869742906" y2="-2.833087317" id="78034350-deff-46be-90b4-144c7cefbee6" layer="grey" />
+    <line x1="0.861129377" y1="-2.8" x2="0.861129377" y2="-2.837666815" id="3893e8d1-cf8f-4e2f-a2bf-ac84c0c9b443" layer="grey" />
+    <line x1="0.6125" y1="-3.15" x2="0.523479055" y2="-3.15" id="0dfdaddb-b0a6-4d88-826e-c1cc2ef0fee5" layer="grey" />
+    <line x1="0.9625" y1="-3.15" x2="1.062685947" y2="-3.15" id="c51e7f33-36dc-4069-be46-2d9e217b8900" layer="grey" />
+    <line x1="0.6125" y1="-3.15" x2="0.714699391" y2="-3.15" id="3aac6119-d05c-432d-8979-a59c1832786f" layer="grey" />
+    <line x1="0.9625" y1="-3.15" x2="0.862852083" y2="-3.15" id="d0640ac1-9069-49bc-8327-9fcb932c7271" layer="grey" />
+    <line x1="0.714699391" y1="-3.15" x2="0.858275481" y2="-3.099516517" id="15419992-f49e-4f17-b600-985591347d48" layer="grey" />
+    <line x1="0.6125" y1="-3.5" x2="0.523479055" y2="-3.5" id="6248aa0c-f97b-430b-9a9c-e079e534bbe7" layer="grey" />
+    <line x1="0.9625" y1="-3.5" x2="1.062685947" y2="-3.5" id="26dfe1dc-8fb9-4d97-aeef-023294b00ea2" layer="grey" />
+    <line x1="0.6125" y1="-3.5" x2="0.714699391" y2="-3.5" id="5c5b1c3d-5f29-478c-9182-01b43508a068" layer="grey" />
+    <line x1="0.9625" y1="-3.5" x2="0.862852083" y2="-3.5" id="74ecf50f-4480-4591-b1a9-9803f6a7edc2" layer="grey" />
+    <line x1="0.714699391" y1="-3.5" x2="0.858275481" y2="-3.449516517" id="a76ac053-0127-42d6-b70e-805e3b20f190" layer="grey" />
+    <line x1="0.6125" y1="-3.85" x2="0.523479055" y2="-3.85" id="30041cdd-b44c-48b6-90e4-1de5d1fff4ce" layer="grey" />
+    <line x1="0.9625" y1="-3.85" x2="1.062685947" y2="-3.85" id="461df0f0-ba0c-4351-b666-9f4c2dd4d231" layer="grey" />
+    <line x1="0.6125" y1="-3.85" x2="0.714699391" y2="-3.85" id="ae3f7042-67f1-40c0-8826-338a305b7997" layer="grey" />
+    <line x1="0.9625" y1="-3.85" x2="0.862852083" y2="-3.85" id="a7f4cdb1-acca-4607-bc2d-c7fbcaa25285" layer="grey" />
+    <line x1="0.714699391" y1="-3.85" x2="0.858275481" y2="-3.799516517" id="fe1c183a-e0e9-4836-ac0e-aef0326e2f59" layer="grey" />
+    <line x1="0.1875" y1="-4.025" x2="1.3875" y2="-4.025" id="c48cd10c-79df-4223-bc4d-0b396c3ba7da" layer="grey" />
+    <line x1="1.4875" y1="-3.925" x2="1.4875" y2="0.075" id="41321a5b-841f-4cae-818b-daa108a87bfe" layer="grey" />
+    <line x1="1.3875" y1="0.175" x2="0.1875" y2="0.175" id="96c28aad-4de8-405d-853b-77ee9e16b2c8" layer="grey" />
+    <line x1="0.0875" y1="0.075" x2="0.0875" y2="-3.925" id="b2f11e65-067f-407e-a1f0-86f269244ec5" layer="grey" />
+    <arc cx="0.1874999999999991" cy="0.07500000000000107" r="0.1" start="90.0" end="180.0" id="572de003-7820-4dbb-975c-6c87db8fbe51" layer="grey" />
+    <arc cx="1.3875000000000002" cy="0.07500000000000107" r="0.1" start="0.0" end="90.0" id="395fcf44-64e7-4cdb-96a0-baa9d9ebbde7" layer="grey" />
+    <arc cx="1.3875000000000002" cy="-3.925" r="0.1" start="270.0" end="0.0" id="82a35e72-1d4d-455a-8044-9192d1efa547" layer="grey" />
+    <arc cx="0.1874999999999991" cy="-3.925" r="0.1" start="180.0" end="270.0" id="26bf7004-bd45-42e0-8aeb-2e456ab4da84" layer="grey" />
+    <line x1="0.0875" y1="0.0" x2="0.0" y2="0.0" id="4d752e00-4ece-4f34-8d27-620b960efec3" layer="grey" />
+    <line x1="1.4875" y1="0.0" x2="1.575" y2="0.0" id="d58c3282-c118-4392-a76c-c395c317374e" layer="grey" />
+    <line x1="0.0875" y1="-0.7" x2="0.0" y2="-0.7" id="d49d1085-10c9-404c-8749-671e6aa84d45" layer="grey" />
+    <line x1="0.0875" y1="-1.05" x2="0.0" y2="-1.05" id="1405dca1-4817-482f-9e64-95da6081ec59" layer="grey" />
+    <line x1="1.4875" y1="-1.4" x2="1.575" y2="-1.4" id="a096e188-651f-4b4d-bbab-7d101325d86f" layer="grey" />
+    <line x1="0.0875" y1="-1.75" x2="0.0" y2="-1.75" id="fa6ee08d-ec98-477f-86e8-ea8cdfb3bb66" layer="grey" />
+    <line x1="0.0875" y1="-2.1" x2="0.0" y2="-2.1" id="93fade09-1950-4638-a52f-38ce473d6ca3" layer="grey" />
+    <line x1="1.4875" y1="-2.45" x2="1.575" y2="-2.45" id="deecce85-ca80-40b0-a8bf-7b0396715165" layer="grey" />
+    <line x1="0.0875" y1="-2.8" x2="0.0" y2="-2.8" id="4ae1e6d9-015f-4714-bf91-9b55a3429fd8" layer="grey" />
+    <line x1="1.4875" y1="-2.8" x2="1.575" y2="-2.8" id="acde0cdd-d582-43be-a8b0-0f9b7ac38153" layer="grey" />
+    <line x1="0.0875" y1="-3.15" x2="0.0" y2="-3.15" id="727632ed-156c-4dc7-9c75-bcbb215bc039" layer="grey" />
+    <line x1="1.4875" y1="-3.15" x2="1.575" y2="-3.15" id="05d31714-6cfb-4f76-ab9d-66146704ab50" layer="grey" />
+    <line x1="0.0875" y1="-3.5" x2="0.0" y2="-3.5" id="78f40263-4d43-429c-8f1b-c6b5ca3925cf" layer="grey" />
+    <line x1="1.4875" y1="-3.5" x2="1.575" y2="-3.5" id="02e9638d-c82b-4509-ba99-ccc640304788" layer="grey" />
+    <line x1="0.0875" y1="-3.85" x2="0.0" y2="-3.85" id="6850895d-4b11-49f4-8595-5f69f0e33f22" layer="grey" />
+    <line x1="1.4875" y1="-3.85" x2="1.575" y2="-3.85" id="644f8b7b-f3ba-4c6a-bc9a-ff266c46a04f" layer="grey" />
+    <text x="0.7875" y="0.2750000000000011" height="0.1" rotation="0.0" id="f93714bb-6d8e-4172-95c9-a5e4f50c4440" align="center" tstyle="Default" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.7875" y="0.43500000000000105" height="0.1" rotation="0.0" id="77589a9c-968f-490b-9b13-463310b1006d" align="center" tstyle="Default" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.7875" y="0.5950000000000011" height="0.1" rotation="0.0" id="7098931c-63e4-4bbb-99c4-6b75bfa85019" align="center" tstyle="Default" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+</block>

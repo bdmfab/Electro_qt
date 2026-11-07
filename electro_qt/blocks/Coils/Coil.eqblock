@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="Coil" description="Desc" part_number="xxxx" tag_prefix="CON" hyperlink="" manufacturer="" increment="0" prefix_rule="" poles="1" label_pos="above" folder="Coils" terminal_text_editable="0">
+  <entities>
+    <circle cx="0.3500000000000001" cy="0.0" r="0.125" id="ee5bfac7-51c1-4b52-9560-fe9bf8121578" filled="0" layer="0" />
+    <text x="0.3500000000000001" y="-0.033832259718549196" resolved="CR" height="0.08" rotation="0.0" id="43d56615-4738-4932-8813-d1eefc534451" font="Ubuntu" align="center" tstyle="08" layer="0" color="4">
+      <source>CR</source>
+    </text>
+    <line x1="0.225" y1="0.0" x2="0.0" y2="0.0" id="d795a70e-eaa3-4c75-bbf0-366599122d51" layer="0" />
+    <line x1="0.475" y1="0.0" x2="0.7" y2="0.0" id="b6006026-c41e-4a90-9fec-1e2d09cfea5f" layer="0" />
+    <text x="0.35" y="0.225" height="0.1" rotation="0.0" id="4fc66340-a82b-4bb9-a515-60f80b0b336c" align="center" tstyle="Default" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.35" y="0.385" height="0.1" rotation="0.0" id="c090c931-ad5f-4f8c-a3d0-f7243b19419b" align="center" tstyle="Default" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.35" y="0.545" height="0.1" rotation="0.0" id="9b26091c-a4c4-49d6-8842-0f68adf4340d" align="center" tstyle="Default" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.7" y="0.0" num_dx="0.0" num_dy="0.0" />
+</block>
