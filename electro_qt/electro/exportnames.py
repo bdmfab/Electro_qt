@@ -15,6 +15,8 @@ def clean(name: str) -> str:
 
 
 def tab_label(sheet: m.Sheet) -> str:
+    if sheet.cover:
+        return sheet.title or "Cover Sheet"
     return f"{sheet.page:02d}  {sheet.title}".rstrip()
 
 

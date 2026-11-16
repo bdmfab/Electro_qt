@@ -52,7 +52,7 @@ def test_ids_stable(tmp_path):
 
 
 def test_validation():
-    with pytest.raises(ValueError): m.Sheet(0)
+    with pytest.raises(ValueError): m.Sheet(100)
     with pytest.raises(ValueError): m.Sheet(100)
     with pytest.raises(ValueError): m.WireNumber("bogus")
     with pytest.raises(ValueError): m.Sheet(1, zone_count=30)
@@ -898,3 +898,108 @@ def test_auto_layers_named_dashed_and_gray():
     assert d.linetype == "dashed" and d.color == 7
     assert g.color == 8 and g.linetype == "continuous"
     assert n.linetype == "continuous" and n.color == 7
+
+
+def test_cover_sheet(tmp_path):
+    from electro import templates as t, fields, exportnames as en, xmlio
+    cv = t.cover_sheet()
+    assert cv.cover and cv.page == 0 and cv.title_lines == ["", "", "", ""]
+    # border stretched over the old title block area; no title block, no zone markers
+    xs = [v for e in cv.frame for v in (e.x1, e.x2)]
+    assert max(xs) == 16.584 and min(xs) == 0.084 and len(cv.frame) == 8
+    txt = cv.entities[0]
+    assert txt.source == "COVER SHEET" and txt.align == "center" and abs(txt.x - 8.334) < 1e-9
+    assert abs(txt.y + txt.height / 2 - 5.55) < 1e-9                            # centred on the sheet
+    assert abs(txt.height - 0.48) < 1e-9
+    # heavier border everywhere (no title block to tell it apart)
+    assert all(e.style.width == t.TITLE_BLOCK_MM for e in t.display_frame(cv))
+    p = m.Project("c")
+    p.add_sheet(t.sheet_from_template(t.tabloid_template(1), 1, "Power"))
+    p.add_sheet(cv)
+    assert fields.context(p, p.sheets[1])["pages"] == "01"                      # the cover is not counted
+    assert en.sheet_stem(cv) == "Cover Sheet" and en.sheet_stem(p.sheets[1]) == "01 Power"
+    f = str(tmp_path / "c.eqt")
+    xmlio.save_project(p, f)
+    q = xmlio.load_project(f)
+    assert q.sheets[0].cover and not q.sheets[1].cover and sorted(q.sheets) == [0, 1]
+
+
+def test_renumber_sheets_and_sheet_type():
+    from electro import templates as t
+    p = m.Project("n")
+    cv = t.cover_sheet(); p.add_sheet(cv)
+    for pg in (1, 2, 3, 4):
+        p.add_sheet(t.sheet_from_template(t.tabloid_template(1), pg, f"S{pg}"))
+    s3 = p.sheets[3]; mark = m.Line(1, 1, 2, 2, m.Style("0")); s3.entities.append(mark)
+    del p.sheets[2]                                              # delete sheet 2: 3 -> 2, 4 -> 3
+    assert p.renumber_sheets() == {3: 2, 4: 3}
+    assert sorted(p.sheets) == [0, 1, 2, 3] and p.sheets[2] is s3 and s3.page == 2 and mark in p.sheets[2].entities
+    assert p.sheets[0].cover and p.sheets[0].page == 0
+    assert p.renumber_sheets() == {}                             # already tidy
+    # 1 column <-> 2 columns keeps what is drawn
+    assert t.columns_of(s3) == 1 and s3.col_split_x is None
+    assert t.set_columns(s3, 2) and s3.zone_count == 50 and s3.col_split_x is not None and t.columns_of(s3) == 2
+    assert t.zone_of(s3, 12.0, 9.45) == 25                       # right half = zones 25-49
+    assert mark in s3.entities
+    assert t.set_columns(s3, 1) and s3.zone_count == 25 and s3.col_split_x is None
+    assert t.zone_of(s3, 12.0, 9.45) == 0
+    assert not t.set_columns(cv, 2)                              # the cover has no zones
+
+
+def _dxf(entities, blocks="", header="  9\n$INSUNITS\n 70\n4\n", layers=(("0", 7, "CONTINUOUS"), ("HID", 3, "DASHED"))):
+    lay = "".join(f"  0\nLAYER\n  2\n{n}\n 70\n0\n 62\n{c}\n  6\n{lt}\n" for n, c, lt in layers)
+    return (f"  0\nSECTION\n  2\nHEADER\n{header}  0\nENDSEC\n  0\nSECTION\n  2\nTABLES\n  0\nTABLE\n  2\nLAYER\n{lay}"
+            f"  0\nENDTAB\n  0\nENDSEC\n  0\nSECTION\n  2\nBLOCKS\n{blocks}  0\nENDSEC\n"
+            f"  0\nSECTION\n  2\nENTITIES\n{entities}  0\nENDSEC\n  0\nEOF\n")
+
+
+def test_dxf_geometry_import(tmp_path):
+    import math
+    from electro import dxfgeom as dg
+    blocks = ("  0\nBLOCK\n  2\nSYM\n 10\n0\n 20\n0\n  0\nLINE\n  8\n0\n 10\n0\n 20\n0\n 11\n25.4\n 21\n0\n"
+              "  0\nCIRCLE\n  8\n0\n 10\n0\n 20\n0\n 40\n12.7\n  0\nATTDEF\n  8\n0\n 10\n25.4\n 20\n0\n  1\nWIRE#\n 40\n2\n"
+              "  0\nENDBLK\n")
+    ents = ("  0\nLINE\n  8\nHID\n 10\n0\n 20\n0\n 11\n254\n 21\n0\n"
+            "  0\nARC\n  8\n0\n 10\n0\n 20\n0\n 40\n25.4\n 50\n0\n 51\n90\n"
+            "  0\nLWPOLYLINE\n  8\n0\n 70\n0\n 90\n2\n 10\n0\n 20\n0\n 42\n1\n 10\n25.4\n 20\n0\n"
+            "  0\nINSERT\n  8\n0\n  2\nSYM\n 10\n254\n 20\n254\n 50\n90\n"
+            "  0\nINSERT\n  8\n0\n  2\nSYM\n 10\n0\n 20\n0\n 41\n2\n 42\n2\n"
+            "  0\nTEXT\n  8\n0\n 10\n0\n 20\n0\n 40\n2.54\n  1\nHELLO\n 72\n1\n 11\n50.8\n 21\n0\n 73\n0\n"
+            "  0\nSPLINE\n  8\n0\n")
+    f = tmp_path / "t.dxf"; f.write_text(_dxf(ents, blocks))
+    assert dg.file_units(str(f)) == "Millimeters"
+    res = dg.import_geometry(str(f), dg.UNITS["Millimeters"], existing_blocks={"Other"}, existing_layers={"0"})
+    L = [e for e in res.entities if isinstance(e, m.Line)]
+    assert abs(L[0].x2 - 10.0) < 1e-9 and L[0].style.layer == "HID" and L[0].style.linetype == "dashed"
+    A = [e for e in res.entities if isinstance(e, m.Arc)]
+    assert abs(A[0].r - 1.0) < 1e-9 and A[0].end == 90.0
+    half = [a for a in A if abs(a.r - 0.5) < 1e-6]                              # bulge 1 = half circle, radius = chord / 2
+    assert len(half) == 1 and abs(half[0].cx - 0.5) < 1e-6 and abs(((half[0].end - half[0].start) % 360) - 180) < 1e-6
+    refs = [e for e in res.entities if isinstance(e, m.BlockRef)]
+    assert len(refs) == 1 and refs[0].block == "SYM" and refs[0].rotation == 90.0 and abs(refs[0].x - 10.0) < 1e-9
+    assert "SYM" in res.blocks and len(res.blocks["SYM"].slots) == 1 and abs(res.blocks["SYM"].slots[0].x - 1.0) < 1e-9
+    circles = [e for e in res.entities if isinstance(e, m.Circle)]                # the scaled insert was exploded: r 0.5 * 2
+    assert len(circles) == 1 and abs(circles[0].r - 1.0) < 1e-9
+    t = [e for e in res.entities if isinstance(e, m.Text)][0]
+    assert t.source == "HELLO" and t.align == "center" and abs(t.x - 2.0) < 1e-9
+    assert res.stats["skipped SPLINE"] == 1
+    assert set(res.layers) == {"HID"} and res.layers["HID"].linetype == "dashed" and res.layers["HID"].color == 3
+    # a name that is taken is renamed, refs follow
+    r2 = dg.import_geometry(str(f), 1.0, existing_blocks={"SYM"})
+    assert "SYM_dxf" in r2.blocks and [e.block for e in r2.entities if isinstance(e, m.BlockRef)] == ["SYM_dxf"]
+    sh = dg.scratch_sheet(res, "DXF: t")
+    from electro.geometry import bounds
+    b = bounds(sh.entities, res.blocks)
+    assert abs(b[0] - 1.0) < 1e-6 and abs(b[1] - 1.0) < 1e-6 and sh.width >= 12.0
+
+
+def test_dxf_old_polyline_and_binary_refused(tmp_path):
+    from electro import dxfgeom as dg
+    pl = ("  0\nPOLYLINE\n  8\n0\n 70\n1\n  0\nVERTEX\n 10\n0\n 20\n0\n  0\nVERTEX\n 10\n2\n 20\n0\n"
+          "  0\nVERTEX\n 10\n2\n 20\n2\n  0\nSEQEND\n")
+    f = tmp_path / "p.dxf"; f.write_text(_dxf(pl))
+    res = dg.import_geometry(str(f), 1.0)
+    assert len(res.entities) == 3 and all(isinstance(e, m.Line) for e in res.entities)      # closed triangle
+    b = tmp_path / "b.dxf"; b.write_bytes(b"AutoCAD Binary DXF\r\n\x1a\x00rest")
+    with pytest.raises(ValueError):
+        dg.import_geometry(str(b), 1.0)

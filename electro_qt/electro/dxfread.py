@@ -31,6 +31,8 @@ class RawDxf:
     layers: dict = field(default_factory=dict)      # name -> color int
     entities: list = field(default_factory=list)    # modelspace RawEntity
     blocks: dict = field(default_factory=dict)      # name -> list[RawEntity]
+    layer_lt: dict = field(default_factory=dict)    # layer name -> linetype name
+    header: dict = field(default_factory=dict)      # "$INSUNITS" -> "4" (first value of each variable)
 
 
 def _pairs(text: str):
@@ -55,6 +57,7 @@ def read_dxf(path) -> RawDxf:
     n = len(pairs)
     expect_section_name = False
     expect_block_name = False
+    hvar = None
     while i < n:
         code, val = pairs[i]
         i += 1
@@ -78,6 +81,13 @@ def read_dxf(path) -> RawDxf:
             else:
                 cur = RawEntity(val)
             continue
+        if section == "HEADER":
+            if code == 9:
+                hvar = val
+            elif hvar is not None:
+                out.header[hvar] = val
+                hvar = None
+            continue
         if expect_section_name and code == 2:
             section = val
             expect_section_name = False
@@ -96,6 +106,7 @@ def read_dxf(path) -> RawDxf:
 def _store(out: RawDxf, section, block, ent: RawEntity):
     if section == "TABLES" and ent.type == "LAYER":
         out.layers[ent.get(2, "0")] = int(ent.get(62, "7"))
+        out.layer_lt[ent.get(2, "0")] = ent.get(6, "CONTINUOUS")
     elif section == "ENTITIES":
         out.entities.append(ent)
     elif section == "BLOCKS" and block and ent.type != "BLOCK":

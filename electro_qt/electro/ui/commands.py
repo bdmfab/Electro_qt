@@ -178,3 +178,20 @@ class BlockDefCmd(QUndoCommand):
     def undo(self):
         self.scene.project.blocks.pop(self.block.name, None)
         self.scene.blocks_changed.emit()
+
+
+class ImageBoxCmd(QUndoCommand):
+    """Move / resize the cover image (its box is stored on the sheet)."""
+
+    def __init__(self, scene, old, new):
+        super().__init__("Move cover image" if abs(old[2] - new[2]) < 1e-6 else "Resize cover image")
+        self.sc, self.old, self.new = scene, tuple(old), tuple(new)
+
+    def _apply(self, box):
+        self.sc.sheet.logo_box = tuple(box)
+        if self.sc._logo_item is not None:
+            self.sc._logo_item.set_box(box)
+        self.sc.update()
+
+    def redo(self): self._apply(self.new)
+    def undo(self): self._apply(self.old)

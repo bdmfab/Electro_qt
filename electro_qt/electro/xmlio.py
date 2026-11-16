@@ -102,6 +102,8 @@ def sheet_to_xml(s: m.Sheet) -> ET.Element:
                       zone0_y=_fmt(s.zone0_y), grid_x0=_fmt(s.grid_x0))
     if s.col_split_x is not None:
         root.set("col_split_x", _fmt(s.col_split_x))
+    if s.cover:
+        root.set("cover", "1")
     if s.logo_box:
         root.set("logo_box", ",".join(repr(float(v)) for v in s.logo_box))
     for i, t in enumerate(s.title_lines):
@@ -132,6 +134,7 @@ def sheet_from_xml(root: ET.Element) -> m.Sheet:
                 zone0_y=float(root.get("zone0_y", "9.45")), grid_x0=float(root.get("grid_x0", "0")),
                 col_split_x=float(root.get("col_split_x")) if root.get("col_split_x") else None,
                 logo_box=tuple(float(v) for v in root.get("logo_box").split(",")) if root.get("logo_box") else None)
+    s.cover = root.get("cover") == "1"
     lines = {int(t.get("n")): t.get("text", "") for t in root.findall("title_line")}
     s.title_lines = [lines.get(i, "") for i in range(1, 5)]
     fr = root.find("frame")

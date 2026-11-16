@@ -85,6 +85,41 @@ def tabloid_template(columns: int = 1) -> m.Sheet:
     return s
 
 
+COVER_TEXT_HEIGHT = 0.48     # cap height of 48 pt text, in inches
+
+
+def cover_sheet(title: str = "Cover Sheet") -> m.Sheet:
+    """The cover: the 11x17 sheet with the title block and zone markers taken away and the border
+    stretched over their place. Page 00 (not numbered), COVER SHEET centred in 48 pt text (an ordinary
+    text object: double-click to edit it), room for an image above it."""
+    s = m.Sheet(0, title, zone_count=25, row_pitch=0.35, width=17.0, height=11.0, zone0_y=9.45, grid_x0=0.0)
+    s.cover = True
+    L, B, R, T, c = 0.084, 0.3, 16.584, 10.8, 0.125
+    out = [_line(L + c, B, R - c, B), _line(R, B + c, R, T - c), _line(R - c, T, L + c, T),
+           _line(L, T - c, L, B + c), _line(L, T - c, L + c, T), _line(R - c, T, R, T - c),
+           _line(L, B + c, L + c, B), _line(R, B + c, R - c, B)]
+    s.frame = out
+    s.logo_box = (4.334, 6.2, 8.0, 4.2)          # the cover image, above the text
+    cx = (L + R) / 2
+    s.entities = [m.Text(cx, (B + T) / 2 - COVER_TEXT_HEIGHT / 2, "COVER SHEET", "COVER SHEET", COVER_TEXT_HEIGHT,
+                         0.0, m.Style("0", color=TEXT_COLOR), align="center")]
+    return s
+
+
+def columns_of(sheet: m.Sheet) -> int:
+    return 2 if sheet.zone_count == 50 else 1
+
+
+def set_columns(sheet: m.Sheet, columns: int) -> bool:
+    """Change a sheet between the 1 column (zones 00-24) and 2 column (00-49) type: the zone markers
+    and zone count change, everything drawn on the sheet stays. False if the sheet is not the 11x17 type."""
+    if sheet.cover or (sheet.width, sheet.height) != (17.0, 11.0):
+        return False
+    tpl = tabloid_template(columns)
+    sheet.zone_count, sheet.col_split_x, sheet.frame = tpl.zone_count, tpl.col_split_x, tpl.frame
+    return True
+
+
 def default_templates() -> dict:
     return {"11x17 - 1 column (zones 00-24)": tabloid_template(1),
             "11x17 - 2 columns (zones 00-49)": tabloid_template(2)}
@@ -113,7 +148,7 @@ TITLE_BLOCK_MM = 0.7        # twice the default line (1.5 px = 0.33 mm on screen
 
 def _border_box(sheet):
     """(left, bottom, right, top) of the drawing-area border: the four long lines left of the title block."""
-    x0 = sheet.width - 2.0
+    x0 = sheet.width + 1.0 if sheet.cover else sheet.width - 2.0
     long_ = [e for e in sheet.frame if isinstance(e, m.Line) and min(e.x1, e.x2) < x0
              and math.hypot(e.x2 - e.x1, e.y2 - e.y1) > 1.0]
     if not long_:
@@ -125,7 +160,7 @@ def _border_box(sheet):
 def display_frame(sheet: m.Sheet) -> list:
     """The sheet's frame as it is drawn: the border and the title block (the column on the right, the
     last 2 units of the sheet) at double weight. Copies; the stored frame is not changed."""
-    x0 = sheet.width - 2.0
+    x0 = sheet.width + 1.0 if sheet.cover else sheet.width - 2.0
     box = _border_box(sheet)
 
     def on_box(x, y, t=1e-3):

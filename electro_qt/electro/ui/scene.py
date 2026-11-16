@@ -23,7 +23,7 @@ from ..templates import display_frame
 from . import clipboard
 from ..snap import snap, SnapSettings
 from .items import build_item, THEME, make_pen, aci_color
-from .commands import (BlockDefCmd, AddCmd, DeleteCmd, MoveCmd, EditCmd, MoveEachCmd, LayerStateCmd, StateCmd)
+from .commands import (BlockDefCmd, AddCmd, DeleteCmd, MoveCmd, EditCmd, MoveEachCmd, LayerStateCmd, StateCmd, ImageBoxCmd)
 
 KEEP = object()          # "leave unchanged" marker for apply_props(color=...)
 DEFAULT_BG = "#1b1d21"
@@ -79,6 +79,9 @@ class EditorScene(QGraphicsScene):
         self.pending_block = None
         self.place_block_name, self.place_rot, self.last_slot, self.last_block = None, 0.0, "", None
         self.grip_drag = None
+        self.img_drag = None             # moving / resizing the cover image
+        self.img_selected = False
+        self._logo_item = None
         self._press_time, self._press_on_item = 0.0, False
         self.grip_hover = None
         self.grip_anchor = None
@@ -201,16 +204,92 @@ class EditorScene(QGraphicsScene):
             return sh.logo_box
         return (15.134, 6.55, 1.4, 4.2) if (sh.width, sh.height) == (17.0, 11.0) else None
 
+    # ------------------------------------------------------------ the cover image: move / resize
+    def _img_rect(self):
+        """(x, y, w, h) of the cover picture when it can be edited here, else None."""
+        it = getattr(self, "_logo_item", None)
+        return it.fitted() if (it is not None and self.sheet.cover and not self.printing) else None
+
+    def _img_corner_at(self, raw):
+        r = self._img_rect()
+        if r is None or not self.img_selected:
+            return None
+        x, y, w, h = r
+        tol = 10.0 / self.view_scale
+        for i, (cx, cy) in enumerate(((x, y), (x + w, y), (x + w, y + h), (x, y + h))):
+            if math.hypot(raw[0] - cx, raw[1] - cy) <= tol:
+                return i
+        return None
+
+    def _img_begin(self, raw):
+        """Press in the select tool: a corner handle resizes, the picture moves. True if taken."""
+        r = self._img_rect()
+        if r is None:
+            self.img_selected = False
+            return False
+        c = self._img_corner_at(raw)
+        x, y, w, h = r
+        inside = x <= raw[0] <= x + w and y <= raw[1] <= y + h
+        if c is None and not (inside and not any(hasattr(it, "entity_id") and not self._is_label(it)
+                                                 for it in self.items(QPointF(*raw)))):
+            self.img_selected = False
+            return False
+        self.clearSelection()
+        self.img_selected = True
+        self.img_drag = {"corner": c, "start": raw, "box0": r}
+        return True
+
+    def _img_drag_to(self, raw):
+        d = self.img_drag
+        x, y, w, h = d["box0"]
+        if d["corner"] is None:
+            box = (x + raw[0] - d["start"][0], y + raw[1] - d["start"][1], w, h)
+        else:
+            corners = ((x, y), (x + w, y), (x + w, y + h), (x, y + h))
+            fx, fy = corners[(d["corner"] + 2) % 4]               # the opposite corner stays put
+            a = w / h
+            nw = max(0.3, abs(raw[0] - fx), abs(raw[1] - fy) * a)
+            nh = nw / a
+            sx = 1 if raw[0] >= fx else -1
+            sy = 1 if raw[1] >= fy else -1
+            box = (fx if sx > 0 else fx - nw, fy if sy > 0 else fy - nh, nw, nh)
+        d["box"] = box
+        self._logo_item.set_box(box)
+
+    def _img_end(self, cancel=False):
+        d, self.img_drag = self.img_drag, None
+        if d is None:
+            return
+        new, old = d.get("box"), d["box0"]
+        if cancel or new is None or tuple(round(v, 6) for v in new) == tuple(round(v, 6) for v in old):
+            self._logo_item.set_box(old if cancel or new is None else new)
+            return
+        self.undo.push(ImageBoxCmd(self, old, new))
+
+    def _paint_image_sel(self, p, vs):
+        r = self._img_rect()
+        if r is None or not self.img_selected:
+            return
+        x, y, w, h = r
+        p.setPen(QPen(QColor("#4d9dff"), 0, Qt.PenStyle.DashLine)); p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawRect(QRectF(x, y, w, h))
+        s = 5.0 / vs
+        p.setPen(QPen(QColor("#0b1a2b"), 0)); p.setBrush(QColor("#4d9dff"))
+        for cx, cy in ((x, y), (x + w, y), (x + w, y + h), (x, y + h)):
+            p.drawRect(QRectF(cx - s, cy - s, 2 * s, 2 * s))
+
     def _add_logo(self):
         from PySide6.QtGui import QPixmap
         from .items import LogoItem
-        name, box = self.project.info.get("logo"), self.logo_box()
+        self._logo_item = None
+        name, box = self.project.info.get("cover_image" if self.sheet.cover else "logo"), self.logo_box()
         data = self.project.assets.get(name) if name else None
         if not data or not box:
             return
         pm = QPixmap()
         if pm.loadFromData(data):
-            self.addItem(LogoItem(pm, box))
+            self._logo_item = LogoItem(pm, box)
+            self.addItem(self._logo_item)
 
     def _add_item(self, e, selected=False):
         it = build_item(e, self.layers, self._ref)
@@ -975,7 +1054,10 @@ class EditorScene(QGraphicsScene):
         self.status.emit(f"X {x:.3f}   Y {y:.3f}   {self.cursor.kind}")
         self._update_hover(ev.scenePos())
         if self.tool.name == "select":
-            if self.grip_drag is not None:
+            if self.img_drag is not None:
+                self._img_drag_to(self.raw)
+                ev.accept()
+            elif self.grip_drag is not None:
                 self._drag_grip(self.raw)
                 ev.accept()
             else:
@@ -1046,6 +1128,8 @@ class EditorScene(QGraphicsScene):
                 self.show_context_menu(ev)
                 return
             if ev.button() == Qt.MouseButton.LeftButton:
+                if self._img_begin(self.raw):
+                    ev.accept(); self.update(); return
                 g = self._grip_at(self.raw)
                 if g is not None:
                     self._begin_grip(g)
@@ -1073,6 +1157,9 @@ class EditorScene(QGraphicsScene):
         self.update()
 
     def mouseReleaseEvent(self, ev):
+        if self.img_drag is not None:
+            self._img_end()
+            ev.accept(); self.update(); return
         if self.grip_drag is not None:
             self._end_grip()
             ev.accept(); self.update(); return
@@ -1165,6 +1252,9 @@ class EditorScene(QGraphicsScene):
         k = ev.key()
         enter = k in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space)
         if k == Qt.Key.Key_Escape:
+            if self.img_drag is not None:
+                self._img_end(cancel=True)
+            self.img_selected = False; self.update()
             if self.grip_drag is not None:
                 self._end_grip(cancel=True)
             elif self.tool.name == "select":
@@ -1231,12 +1321,13 @@ class EditorScene(QGraphicsScene):
         if self.tool is not None:
             self._paint_hops(p, vs)
             self._paint_hover(p, vs)
-            if self.block_edit:
+            if self.block_edit and "name" in self.block_edit:
                 self._paint_block_origin(p, vs)
             self.tool.paint(p, vs)
             self._paint_marks(p, vs)
             if self.tool.name == "select":
                 self._paint_grips(p, vs)
+                self._paint_image_sel(p, vs)
             if self.tool.name not in ("select", "resize"):
                 self._snap_marker(p, vs)
 

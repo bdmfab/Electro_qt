@@ -268,6 +268,21 @@ class LogoItem(QGraphicsItem):
         x, y, w, h = self._box
         return QRectF(x, y, w, h)
 
+    def aspect(self):
+        return self._pm.width() / max(1, self._pm.height())
+
+    def fitted(self):
+        """(x, y, w, h) of the picture itself: the box with the aspect ratio kept."""
+        x, y, w, h = self._box
+        a = self.aspect()
+        fw, fh = (w, w / a) if w / a <= h else (h * a, h)
+        return (x + (w - fw) / 2, y + (h - fh) / 2, fw, fh)
+
+    def set_box(self, box):
+        self.prepareGeometryChange()
+        self._box = tuple(box)
+        self.update()
+
     def paint(self, painter, option, widget=None):
         x, y, w, h = self._box
         pw, ph = self._pm.width(), self._pm.height()

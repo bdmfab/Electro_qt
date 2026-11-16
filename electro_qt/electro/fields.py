@@ -14,7 +14,7 @@ def today() -> str:
 
 def context(project: m.Project, sheet: m.Sheet) -> dict:
     ctx = {k: str(v) for k, v in project.info.items()}
-    ctx.update(page=f"{sheet.page:02d}", pages=f"{len(project.sheets):02d}",
+    ctx.update(page=f"{sheet.page:02d}", pages=f"{sum(1 for x in project.sheets.values() if not x.cover):02d}",
                sheet_name=sheet.title, job=ctx.get("job", ""))
     for i, t in enumerate(sheet.title_lines, 1):
         ctx[f"title{i}"] = t

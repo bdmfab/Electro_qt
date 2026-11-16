@@ -12,8 +12,8 @@ def new_id() -> str:
 
 
 def page_str(page: int) -> str:
-    if not 1 <= page <= 99:
-        raise ValueError(f"page must be 01-99, got {page}")
+    if not 0 <= page <= 99:                      # 00 is the cover sheet
+        raise ValueError(f"page must be 00-99, got {page}")
     return f"{page:02d}"
 
 
@@ -207,6 +207,7 @@ class Sheet:
     col_split_x: Optional[float] = None    # two-column sheets: x >= this is zones 25-49
     title_lines: list = field(default_factory=lambda: ["", "", "", ""])
     frame: list = field(default_factory=list)   # border, zone markers, title block (not user-editable objects)
+    cover: bool = False           # the cover sheet: page 00, not numbered, no title block / zones
 
     def __post_init__(self):
         page_str(self.page)
@@ -303,6 +304,30 @@ class Project:
     lead_zero_suppress: bool = False
     assets: dict = field(default_factory=dict)     # path -> bytes
     schema_version: int = SCHEMA_VERSION
+
+    def renumber_sheets(self) -> dict:
+        """Close the gaps: the numbered sheets become 01, 02, 03 ... in their current order (the cover
+        stays 00). Goto targets follow. -> {old page: new page} for the sheets that changed."""
+        old = sorted(self.sheets)
+        mapping, nxt = {}, 1
+        for pg in old:
+            if self.sheets[pg].cover:
+                mapping[pg] = pg
+            else:
+                mapping[pg] = nxt
+                nxt += 1
+        changed = {a: b for a, b in mapping.items() if a != b}
+        if changed:
+            new = {}
+            for pg in old:
+                sh = self.sheets[pg]
+                sh.page = mapping[pg]
+                new[sh.page] = sh
+            self.sheets = new
+            for sh in new.values():
+                for g in sh.gotos:
+                    g.targets = [(n, mapping.get(p, p)) for n, p in g.targets]
+        return changed
 
     def add_sheet(self, sheet: Sheet) -> Sheet:
         if sheet.page in self.sheets:

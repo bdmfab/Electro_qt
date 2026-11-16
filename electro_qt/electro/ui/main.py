@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         from ..exportnames import tab_label
         return tab_label(sheet)
 
-    def _add_tab(self, sheet):
+    def _add_tab(self, sheet, index=None):
         sc = EditorScene(self.project, sheet)
         v = EditorView(sc)
         self.undo_group.addStack(sc.undo)
@@ -163,7 +163,8 @@ class MainWindow(QMainWindow):
         sc.scene_for_page = lambda pg: next((x for x in self._sheet_scenes() if x.sheet.page == pg), None)
         sc.folder_choices = list(self.store.folders)
         sc.undo.cleanChanged.connect(self._title)
-        i = self.tabs.addTab(v, self._tab_label(sheet))
+        i = self.tabs.addTab(v, self._tab_label(sheet)) if index is None else \
+            self.tabs.insertTab(index, v, self._tab_label(sheet))
         self._tab_buttons()
         self._sync(sc)
         return i
@@ -220,6 +221,7 @@ class MainWindow(QMainWindow):
         fm = self.menuBar().addMenu("&File")
         fm.addAction(self._act("&New", self.on_new, S.New))
         fm.addAction(self._act("&Open...", self.on_open, S.Open))
+        fm.addAction(self._act("Open &DXF (scratch tab)...", self.on_open_dxf))
         fm.addAction(self._act("&Save", self.on_save, S.Save))
         fm.addAction(self._act("Save &As...", self.on_save_as, S.SaveAs))
         fm.addSeparator()
@@ -269,6 +271,11 @@ class MainWindow(QMainWindow):
         sm.addAction(self._act("&Rule check...", self.on_rule_check))
         sm.addSeparator()
         sm.addAction(self._act("&Title block...", self.on_title_block))
+        sm.addAction(self._act("Sheet t&ype (1 / 2 columns)...", self.on_sheet_type))
+        sm.addAction(self._act("&Renumber sheets", self.on_renumber_sheets))
+        sm.addAction(self._act("Add &cover sheet", self.on_add_cover))
+        sm.addAction(self._act("Cover sheet i&mage...", self.on_cover_image))
+        sm.addAction(self._act("Remove cover sheet image", self.on_remove_cover_image))
         sm.addAction(self._act("Title block &image...", self.on_logo))
         sm.addAction(self._act("&Remove title block image", self.on_remove_logo))
 
@@ -563,7 +570,7 @@ class MainWindow(QMainWindow):
             return
         for i in range(self.tabs.count()):
             sc = self.tabs.widget(i).scene()
-            if sc.block_edit and sc.block_edit["name"] == name:
+            if sc.block_edit and sc.block_edit.get("name") == name:
                 self.tabs.setCurrentIndex(i); return
         i = self._add_tab(bk.edit_sheet(blk))
         sc = self.tabs.widget(i).scene()
@@ -576,10 +583,63 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Editing block {name}: draw / move / delete, add slots with the Slot tool "
                                      "(magenta cross = block origin). Library > Apply block edit saves it.", 12000)
 
+    def on_open_dxf(self):
+        """File > Open DXF: the drawing opens in a scratch tab (not part of the project). Use the normal tools
+        there: select, copy with a base point into a sheet, or Make block from a selection. Blocks the DXF places
+        come across as project blocks."""
+        import copy
+        from .. import dxfgeom
+        path, _ = QFileDialog.getOpenFileName(self, "Open DXF", os.path.dirname(getattr(self, "path", "") or ""),
+                                              "DXF (*.dxf)")
+        if not path:
+            return
+        try:
+            guess = dxfgeom.file_units(path)
+        except (ValueError, OSError) as e:
+            QMessageBox.warning(self, "Open DXF", str(e)); return
+        names = list(dxfgeom.UNITS)
+        label = f"The file says: {guess}." if guess else "The file does not say what its units are."
+        name, ok = QInputDialog.getItem(self, "Open DXF", f"{label}\nUnits of the drawing:", names,
+                                        names.index(guess) if guess else 0, False)
+        if not ok:
+            return
+        try:
+            res = dxfgeom.import_geometry(path, dxfgeom.UNITS[name], existing_blocks=self.project.blocks,
+                                          existing_layers=self.project.layers)
+        except Exception as e:                           # noqa: BLE001 - a damaged file should not crash the program
+            import traceback
+            box = QMessageBox(QMessageBox.Icon.Warning, "Open DXF", f"Could not read the DXF:\n{type(e).__name__}: {e}", parent=self)
+            box.setDetailedText(traceback.format_exc()); box.exec(); return
+        for ln, lay in res.layers.items():
+            self.project.layers.setdefault(ln, lay)
+        for bn, blk in res.blocks.items():
+            bk.capture_layers(self.project, blk)
+            self.project.blocks[bn] = copy.deepcopy(blk)
+        base = os.path.basename(path)
+        sheet = dxfgeom.scratch_sheet(res, f"DXF {base}")
+        i = self._add_tab(sheet)
+        sc = self.tabs.widget(i).scene()
+        sc.block_edit = {"dxf": path}
+        sc.rebuild()
+        self.tabs.setTabText(i, f"DXF: {base}")
+        self._tab_buttons()
+        self.tabs.setCurrentIndex(i)
+        self.tabs.widget(i).zoom_extents()
+        if res.blocks:
+            self._dirty_library()
+        st = res.stats
+        notes = [f"{k}: {v}" for k, v in st.items() if k.startswith(("skipped", "ellipses", "inserts"))]
+        if res.renamed:
+            notes += [f"block {a} renamed {b} (name taken)" for a, b in res.renamed.items()]
+        msg = f"{st['objects']} object(s)" + (f", {st['blocks']} block(s) added to the project" if st["blocks"] else "")
+        self.statusBar().showMessage(f"DXF opened: {msg}. Select, copy (with base point) into a sheet, or Make block.", 15000)
+        if notes:
+            QMessageBox.information(self, "Open DXF", f"{msg}.\n\nNot brought across as-is:\n  " + "\n  ".join(notes))
+
     def on_apply_block_edit(self, sc=None):
         import copy
         sc = sc or self.scene_
-        if sc is None or not sc.block_edit:
+        if sc is None or not sc.block_edit or "name" not in sc.block_edit:
             QMessageBox.information(self, "Apply block edit", "Open a block first (Library > right-click a block > Edit block)."); return False
         name = sc.block_edit["name"]
         old = self._find_block(name)
@@ -605,7 +665,12 @@ class MainWindow(QMainWindow):
         if not sc.block_edit:
             self.statusBar().showMessage("Only block-edit tabs can be closed.", 4000)
             return
-        if not sc.undo.isClean():
+        if "dxf" in sc.block_edit:                   # a scratch tab: nothing to save back
+            if not sc.undo.isClean() and QMessageBox.question(
+                    self, "Close DXF tab", "This DXF tab is not saved anywhere (copy what you need into a sheet or make "
+                    "a block first). Close it?") != QMessageBox.StandardButton.Yes:
+                return
+        elif not sc.undo.isClean():
             B = QMessageBox.StandardButton
             r = QMessageBox.question(self, "Block edit", f"Save the changes to block {sc.block_edit['name']}?",
                                      B.Save | B.Discard | B.Cancel)
@@ -1142,8 +1207,103 @@ class MainWindow(QMainWindow):
         self._extra_dirty = True
         self._title()
 
+    def _retitle_tabs(self):
+        for i in range(self.tabs.count()):
+            v = self.tabs.widget(i)
+            sc = v.scene() if v is not None else None
+            if sc is not None and not sc.block_edit:
+                self.tabs.setTabText(i, self._tab_label(sc.sheet))
+
+    def _renumbered(self, changed):
+        self._retitle_tabs()
+        self._refresh_all()
+        self._extra_dirty = True
+        self._title()
+        if changed:
+            txt = ", ".join(f"{a:02d} -> {b:02d}" for a, b in sorted(changed.items()))
+            self.statusBar().showMessage(f"Sheets renumbered ({txt}). Press Update wire numbers to refresh wire numbers.", 12000)
+
+    def on_renumber_sheets(self):
+        """Sheet > Renumber sheets: close the gaps (also done automatically when a sheet is deleted)."""
+        changed = self.project.renumber_sheets()
+        if not changed:
+            QMessageBox.information(self, "Renumber sheets", "The sheets are already numbered 01, 02, 03 ... with no gaps.")
+            return
+        self._renumbered(changed)
+
+    def on_sheet_type(self):
+        """Sheet > Sheet type: switch the current sheet between 1 column (zones 00-24) and 2 columns (00-49)."""
+        from ..templates import columns_of, set_columns
+        sc = self.scene_
+        if sc is None or sc.block_edit:
+            QMessageBox.information(self, "Sheet type", "Open a sheet first."); return
+        sh = sc.sheet
+        if sh.cover or (sh.width, sh.height) != (17.0, 11.0):
+            QMessageBox.information(self, "Sheet type", "Only the 11x17 sheets have a 1 / 2 column type."); return
+        names = ["1 column (zones 00-24)", "2 columns (zones 00-49)"]
+        cur = columns_of(sh) - 1
+        name, ok = QInputDialog.getItem(self, "Sheet type", f"Sheet {sh.page:02d} is now {names[cur]}. Change to:",
+                                        names, 1 - cur, False)
+        if not ok or names.index(name) == cur:
+            return
+        set_columns(sh, names.index(name) + 1)
+        self._refresh_all()
+        self._extra_dirty = True
+        self._title()
+        self.statusBar().showMessage(f"Sheet {sh.page:02d} is now {name}. Zones changed: press Update wire numbers.", 12000)
+
+    def on_add_cover(self):
+        """Sheet > Add cover sheet: page 00, first tab, not numbered; the title block gives way to the border."""
+        from ..templates import cover_sheet
+        if any(x.cover for x in self.project.sheets.values()):
+            QMessageBox.information(self, "Cover sheet", "The project already has a cover sheet."); return
+        if 0 in self.project.sheets:
+            QMessageBox.warning(self, "Cover sheet", "Page 00 is already in use."); return
+        sheet = cover_sheet()
+        self.project.add_sheet(sheet)
+        i = self._add_tab(sheet, index=0)
+        self.tabs.setCurrentIndex(i)
+        self._refresh_all()
+        self._extra_dirty = True
+        self._title()
+        self.statusBar().showMessage("Cover sheet added. Double-click the text to edit it; Sheet > Cover sheet image... adds a picture", 10000)
+
+    def _pick_image(self, title):
+        from PySide6.QtCore import QByteArray, QBuffer, QIODevice
+        from PySide6.QtGui import QImage
+        path, _ = QFileDialog.getOpenFileName(self, title, "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)")
+        if not path:
+            return None
+        img = QImage(path)
+        if img.isNull():
+            QMessageBox.warning(self, title, "That file could not be read as an image."); return None
+        if max(img.width(), img.height()) > 1600:          # keep the project file small
+            img = img.scaled(1600, 1600, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        ba = QByteArray(); buf = QBuffer(ba); buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        img.save(buf, "PNG")
+        return bytes(ba)
+
+    def on_cover_image(self):
+        if not any(x.cover for x in self.project.sheets.values()):
+            QMessageBox.information(self, "Cover sheet image", "Add a cover sheet first (Sheet > Add cover sheet)."); return
+        data = self._pick_image("Cover sheet image")
+        if data is None:
+            return
+        self.project.assets["cover.png"] = data
+        self.project.info["cover_image"] = "cover.png"
+        self._refresh_all()
+        self._extra_dirty = True
+        self._title()
+
+    def on_remove_cover_image(self):
+        self.project.info.pop("cover_image", None)
+        self.project.assets.pop("cover.png", None)
+        self._refresh_all()
+        self._extra_dirty = True
+        self._title()
+
     def on_delete_sheet(self):
-        if len(self.project.sheets) <= 1:
+        if sum(1 for x in self.project.sheets.values() if not x.cover) <= 1 and not self.scene_.sheet.cover:
             QMessageBox.information(self, "Delete sheet", "A project needs at least one sheet."); return
         sc = self.scene_
         if sc.block_edit:
@@ -1157,7 +1317,7 @@ class MainWindow(QMainWindow):
         self.undo_group.removeStack(sc.undo)
         del self.project.sheets[sc.sheet.page]
         self.tabs.removeTab(i)
-        self._refresh_all()
+        self._renumbered(self.project.renumber_sheets())       # 4 becomes 3 ...
         self._extra_dirty = True
         self._title()
 
