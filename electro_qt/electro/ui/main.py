@@ -272,6 +272,7 @@ class MainWindow(QMainWindow):
         sm.addSeparator()
         sm.addAction(self._act("&Title block...", self.on_title_block))
         sm.addAction(self._act("Sheet t&ype (1 / 2 columns)...", self.on_sheet_type))
+        sm.addAction(self._act("&Move sheet...", self.on_move_sheet))
         sm.addAction(self._act("&Renumber sheets", self.on_renumber_sheets))
         sm.addAction(self._act("Add &cover sheet", self.on_add_cover))
         sm.addAction(self._act("Cover sheet i&mage...", self.on_cover_image))
@@ -1037,7 +1038,11 @@ class MainWindow(QMainWindow):
             if lst:
                 sc.undo.push(EditCmd(sc, "Update wire numbers", modify=[(l, {"number": num}) for l, num in lst]))
                 n += len(lst)
-        self.statusBar().showMessage(f"Wire numbers: {rep.numbered} of {rep.nets} wire(s) numbered, {n} line(s) changed")
+        renames = nb.goto_renames(self.project)             # goto connectors follow their wire's new number
+        if renames:
+            self.apply_connector_renames(dict(renames))
+        self.statusBar().showMessage(f"Wire numbers: {rep.numbered} of {rep.nets} wire(s) numbered, {n} line(s) changed"
+                                     + (f", {len(renames)} goto name(s) updated" if renames else ""))
         warnings = list(rep.warnings)
         if rep.duplicates:
             lines = []
@@ -1060,6 +1065,16 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Wire numbers",
                                     "No numbered wire lines were found. Wires must be on a wire layer with "
                                     "'numbered' ticked (Layers...), and a wire must be marked: right-click > Mark wire.")
+
+    def apply_connector_renames(self, mapping):
+        """Rename off-page connectors {old tag: new tag} on every sheet (undoable per sheet)."""
+        for sc in self._sheet_scenes():
+            mods = [(r, {"tag": mapping[r.tag]}) for r in walk(sc.sheet.entities)
+                    if isinstance(r, m.BlockRef) and r.tag in mapping
+                    and getattr(self.project.blocks.get(r.block), "connector", 0)]
+            if mods:
+                sc.undo.push(EditCmd(sc, "Rename gotos", modify=mods))
+        self._refresh_xrefs()
 
     def apply_goto(self, pairs, numbers=None):
         """pairs = [(name, (page, Net) for the From or None, (page, Net) for the To)]: a From and a To
@@ -1230,6 +1245,45 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Renumber sheets", "The sheets are already numbered 01, 02, 03 ... with no gaps.")
             return
         self._renumbered(changed)
+
+    def on_move_sheet(self):
+        """Sheet > Move sheet: give the current sheet another position (2 -> 3: the old 3 becomes 2). Tabs, PAGE n OF m
+        and goto targets follow; press Update wire numbers and the goto connectors are renamed to the new numbers."""
+        sc = self.scene_
+        if sc is None or sc.block_edit:
+            QMessageBox.information(self, "Move sheet", "Open a sheet first."); return
+        sh = sc.sheet
+        if sh.cover:
+            QMessageBox.information(self, "Move sheet", "The cover sheet always stays first."); return
+        n = sum(1 for x in self.project.sheets.values() if not x.cover)
+        if n < 2:
+            QMessageBox.information(self, "Move sheet", "There is only one numbered sheet."); return
+        new, ok = QInputDialog.getInt(self, "Move sheet", f"Move sheet {sh.page:02d} to position (1 - {n}):", sh.page, 1, n)
+        if not ok or new == sh.page:
+            return
+        changed = self.project.move_sheet(sh.page, new)
+        self._renumbered(changed)
+        for i in range(self.tabs.count()):                   # tabs follow the new order
+            v = self.tabs.widget(i)
+            if v is not None and v.scene() is sc:
+                self.tabs.setCurrentIndex(i)
+        self._reorder_tabs()
+        self.statusBar().showMessage(f"Sheet moved to {new:02d}. Press Update wire numbers: the numbers and the goto "
+                                     "connector names follow.", 12000)
+
+    def _reorder_tabs(self):
+        """Sheet tabs in page order (block / DXF tabs keep their place after them)."""
+        bar = self.tabs.tabBar()
+        order = sorted(range(self.tabs.count()), key=lambda i: (
+            self.tabs.widget(i).scene().block_edit is not None, self.tabs.widget(i).scene().sheet.page, i))
+        cur = self.tabs.currentWidget()
+        widgets = [self.tabs.widget(i) for i in order]
+        for target, w in enumerate(widgets):
+            cur_i = next(i for i in range(self.tabs.count()) if self.tabs.widget(i) is w)
+            if cur_i != target:
+                bar.moveTab(cur_i, target)
+        self.tabs.setCurrentWidget(cur)
+        self._retitle_tabs()
 
     def on_sheet_type(self):
         """Sheet > Sheet type: switch the current sheet between 1 column (zones 00-24) and 2 columns (00-49)."""

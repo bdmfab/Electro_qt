@@ -157,11 +157,31 @@ def resolved_entities(project, sheet, block, ref):
     ctx = block_context(project, sheet, block, ref)
     ents = block_entities(block, ref)
     hidden = {"{" + k + "}" for k in ref.props.get("hide", "").split(",") if k}
+    dx, dy = label_offset(ref)
     for t in leaves(ents):
         if isinstance(t, m.Text):
             t.resolved = "" if t.source in hidden else fields.resolve(t.source, ctx)
             t.hidden = t.resolved == "" and t.source != ""       # blank value: draw nothing (not the {code})
+            if t.source in LABEL_CODES:                          # this part's label dragged away from its home
+                t.x += dx
+                t.y += dy
     return ents
+
+
+def label_offset(ref: m.BlockRef):
+    """(dx, dy) the label of this placed part was dragged by (drawing units)."""
+    try:
+        return float(ref.props.get("label_dx", 0.0)), float(ref.props.get("label_dy", 0.0))
+    except (TypeError, ValueError):
+        return 0.0, 0.0
+
+
+def label_anchor(project, sheet, block, ref):
+    """World position of the first label line of a placed part (what the label grip sits on), or None."""
+    for t in leaves(resolved_entities(project, sheet, block, ref)):
+        if isinstance(t, m.Text) and t.source in LABEL_CODES and not getattr(t, "hidden", False):
+            return (t.x, t.y)
+    return None
 
 
 # ------------------------------------------------------------ tags
@@ -224,6 +244,17 @@ def rebuild_label(block: m.BlockDef, lines, pos="above"):
     for s in block.slots:
         xs.append(s.x); ys.append(s.y)
     x0, x1, y1 = min(xs), max(xs), max(ys)
+    y0 = min(ys)
+    if pos in ("topleft", "topright", "bottomleft", "bottomright"):   # inside a corner (big blocks: PLCs)
+        left = pos.endswith("left")
+        x = x0 + 0.1 if left else x1 - 0.1
+        n = len(lines)
+        y = (y1 - 0.2) if pos.startswith("top") else (y0 + 0.1 + (n - 1) * 0.16)
+        for key in lines:
+            block.entities.append(m.Text(x, y, "{" + key + "}", "", 0.1, 0.0, m.Style("0"),
+                                         align="left" if left else "right"))
+            y -= 0.16
+        return
     if pos == "right":
         y = y1 - 0.05
         for key in lines:

@@ -84,7 +84,9 @@ def ref_attributes(project, sheet, blk: m.BlockDef, ref: m.BlockRef):
             tag = LABEL_ATTR[t.source]
             code = t.source[1:-1]
             val = "" if t.source in hidden else ctx.get(code, "")
-            out.append((tag, val, bk._to_world((t.x, t.y), ref), t.height, t.align, True))
+            wx, wy = bk._to_world((t.x, t.y), ref)
+            ox, oy = bk.label_offset(ref)
+            out.append((tag, val, (wx + ox, wy + oy), t.height, t.align, True))
             used.add(tag)
     hid = [("TAG", ref.tag), ("DESCRIPTION", ctx.get("description", "")), ("PART_NUMBER", ctx.get("part", "")),
            ("MANUFACTURER", ctx.get("manufacturer", "")), ("XREF", ctx.get("xref", ""))]

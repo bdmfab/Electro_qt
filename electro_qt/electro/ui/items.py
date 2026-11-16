@@ -379,9 +379,14 @@ class BlockRefItem(GroupItem):
         tmp.id = e.id
         super().__init__(tmp, layers, scene_ref)
 
-    def shape(self):                          # the whole body is clickable
-        p = QPainterPath()
-        p.addRect(self.childrenBoundingRect().adjusted(-0.05, -0.05, 0.05, 0.05))
+    SOLID_MAX = 1.5                           # inches: bigger blocks are picked by their lines, not their inside
+
+    def shape(self):
+        r = self.childrenBoundingRect()
+        if max(r.width(), r.height()) > self.SOLID_MAX:
+            return super().shape()            # a PLC across the page must not hide what lies under it
+        p = QPainterPath()                    # a small part: the whole body is clickable
+        p.addRect(r.adjusted(-0.05, -0.05, 0.05, 0.05))
         return p
 
 

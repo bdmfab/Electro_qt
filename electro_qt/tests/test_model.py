@@ -705,8 +705,8 @@ def test_goto_connectors():
     put, bad = nb.goto_connectors(p, a, b, name)
     assert not bad
     (pg1, k1, pt1, r1, n1), (pg2, k2, pt2, r2, n2) = put
-    assert (pg1, k1, pt1, r1) == (1, "From", (3, 5), 0.0)                        # leaves to the right
-    assert (pg2, k2, pt2, r2) == (2, "To", (1, 5), 0.0)                          # arrives from the left, body further left
+    assert (pg1, k1, pt1, r1) == (1, "From", (1, 5), 180.0)                      # both ends free: From on the left end
+    assert (pg2, k2, pt2, r2) == (2, "To", (3, 5), 180.0)                        # To on the right end
     assert n1 == n2 == "02041-1"
     # place the connectors: the wires are now one group, no longer duplicates, numbers unchanged
     for pg, kind, pt, rot, nm in put:
@@ -1003,3 +1003,75 @@ def test_dxf_old_polyline_and_binary_refused(tmp_path):
     b = tmp_path / "b.dxf"; b.write_bytes(b"AutoCAD Binary DXF\r\n\x1a\x00rest")
     with pytest.raises(ValueError):
         dg.import_geometry(str(b), 1.0)
+
+
+def test_goto_uses_the_free_end_whichever_side():
+    from electro import numbering as nb, blocks as bk
+    p = m.Project("e"); sh = p.add_sheet(m.Sheet(1)); sh2 = p.add_sheet(m.Sheet(2))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    for k in ("from", "to"):
+        b = bk.default_connector_block(k); p.blocks[b.name] = b
+    pb = bk.make_block("PB", [m.Line(0, 0, 1, 0, m.Style("0")), m.SlotMark(0, 0, "1")], (0, 0), (), "above")
+    p.blocks["PB"] = pb
+    sh.entities += [m.Line(0, 5, 3, 5, m.Style("W")), m.BlockRef("PB", 3, 5)]       # a part sits on the RIGHT end
+    sh2.entities += [m.Line(0, 5, 3, 5, m.Style("W"))]
+    na = nb.build_nets(p, sh)[0]; nbn = nb.build_nets(p, sh2)[0]
+    put, bad = nb.goto_connectors(p, (1, na), (2, nbn), "7-1")
+    (_, k1, pt1, r1, _), (_, k2, pt2, r2, _) = put
+    assert pt1 == (0, 5) and r1 == 180.0                 # the part holds the right end, so the From takes the left end
+    assert pt2 == (3, 5)
+
+
+def test_move_sheet():
+    from electro import templates as t
+    p = m.Project("mv")
+    cv = t.cover_sheet(); p.add_sheet(cv)
+    shs = {pg: p.add_sheet(t.sheet_from_template(t.tabloid_template(1), pg, f"S{pg}")) for pg in (1, 2, 3, 4)}
+    assert p.move_sheet(2, 3) == {2: 3, 3: 2}                        # 2 -> 3, the old 3 becomes 2
+    assert shs[2].page == 3 and shs[3].page == 2 and p.sheets[3] is shs[2] and sorted(p.sheets) == [0, 1, 2, 3, 4]
+    assert p.move_sheet(4, 1) == {4: 1, 1: 2, 2: 3, 3: 4}            # to the front: everything else shifts
+    assert p.sheets[1] is shs[4] and p.sheets[0].cover
+    assert p.move_sheet(1, 1) == {}
+    with pytest.raises(ValueError):
+        p.move_sheet(0, 2)                                           # the cover is not moved
+
+
+def test_goto_names_follow_wire_numbers():
+    from electro import numbering as nb, blocks as bk
+    p = m.Project("r")
+    s1, s2 = p.add_sheet(m.Sheet(1)), p.add_sheet(m.Sheet(2))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    for k in ("from", "to"):
+        b = bk.default_connector_block(k); p.blocks[b.name] = b
+    w1 = m.Line(0, 5, 3, 5, m.Style("W")); w1.number = m.WireNumber("auto", "09")
+    w2 = m.Line(0, 5, 3, 5, m.Style("W")); w2.number = m.WireNumber("auto", "09")
+    f = m.BlockRef("From", 3, 5, tag="07-1"); t_ = m.BlockRef("To", 0, 5, tag="07-1")
+    s1.entities += [w1, f]; s2.entities += [w2, t_]
+    assert nb.goto_renames(p) == [("07-1", "09-1")]                  # the wires are 09 now: the set follows
+    w1.number = m.WireNumber("auto", "07"); w2.number = m.WireNumber("auto", "07")
+    assert nb.goto_renames(p) == []                                  # numbers match the name: nothing to do
+    w1.number = m.WireNumber("auto", "09"); w2.number = m.WireNumber("auto", "09")
+    s2.entities.append(m.BlockRef("To", 9, 9, tag="09-1"))           # 09-1 is already taken somewhere
+    assert nb.goto_renames(p) == [("07-1", "09-2")]
+
+
+def test_block_label_corners_and_part_offset():
+    from electro import blocks as bk
+    box = [m.Line(0, 0, 4, 0, m.Style("0")), m.Line(4, 0, 4, 3, m.Style("0")), m.Line(4, 3, 0, 3, m.Style("0")),
+           m.Line(0, 3, 0, 0, m.Style("0"))]
+    p = m.Project("l"); sh = p.add_sheet(m.Sheet(1))
+    for pos, ax, ay_top in (("topleft", "left", True), ("topright", "right", True),
+                            ("bottomleft", "left", False), ("bottomright", "right", False)):
+        b = bk.make_block("PLC", box, (0, 0), ("description", "tag"), pos, tag_prefix="A")
+        txts = [e for e in b.entities if isinstance(e, m.Text)]
+        assert all(t.align == ax for t in txts)
+        xs = {round(t.x, 3) for t in txts}
+        assert xs == ({0.1} if ax == "left" else {3.9})
+        ys = [t.y for t in txts]
+        assert (max(ys) > 2.5) if ay_top else (max(ys) < 1.0)         # inside the corner, not mid-page
+    p.blocks["PLC"] = b
+    r = m.BlockRef("PLC", 2, 2, tag="A1")
+    home = bk.label_anchor(p, sh, b, r)
+    r.props["label_dx"], r.props["label_dy"] = "1.5", "-0.25"
+    moved = bk.label_anchor(p, sh, b, r)
+    assert abs(moved[0] - home[0] - 1.5) < 1e-9 and abs(moved[1] - home[1] + 0.25) < 1e-9

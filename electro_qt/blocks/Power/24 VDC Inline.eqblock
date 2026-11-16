@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="24 VDC Inline" description="24 VDC" part_number="xxxx" tag_prefix="PS" hyperlink="" manufacturer="" increment="0" connector="0" prefix_rule="" poles="1" label_pos="above" folder="" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <text x="0.10421711656681265" y="-0.05464873168880935" resolved="&lt;size=0.833&gt;L1&lt;/size&gt;" height="0.12" rotation="0.0" id="df538524-7c1c-4e28-b596-263d2bffc021" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;L1&lt;/size&gt;</source>
+    </text>
+    <text x="0.11854607362408065" y="-0.40464873168881255" resolved="&lt;size=0.833&gt;N&lt;/size&gt;" height="0.12" rotation="0.0" id="d3a700da-a146-4aad-9148-6bcb6867d834" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;N&lt;/size&gt;</source>
+    </text>
+    <text x="0.4375000000000002" y="-0.05942505070790105" resolved="&lt;size=0.833&gt;+24&lt;/size&gt;" height="0.12" rotation="0.0" id="9c1582a7-31ca-45be-9cd1-ba422d98f7a0" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;+24&lt;/size&gt;</source>
+    </text>
+    <text x="0.48706214298624384" y="-0.40348254563710917" resolved="&lt;size=0.833&gt;0V&lt;/size&gt;" height="0.12" rotation="0.0" id="d2e60915-220f-4371-8d5b-6ea425eeb665" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;0V&lt;/size&gt;</source>
+    </text>
+    <line x1="0.0875" y1="-0.4375" x2="0.7" y2="-0.4375" id="5abbdab7-3cff-4812-ae99-69eaf4a4acad" layer="0" color="8" />
+    <line x1="0.7" y1="-0.4375" x2="0.7" y2="0.0875" id="02f051c5-5e86-4a2c-b5b3-793b9d71ccc4" layer="0" color="8" />
+    <line x1="0.7" y1="0.0875" x2="0.0875" y2="0.0875" id="c69e3423-742f-441e-91a9-78b6888906e0" layer="0" color="8" />
+    <line x1="0.0875" y1="0.0875" x2="0.0875" y2="-0.4375" id="5697373a-73ea-4524-9fcb-c40250828303" layer="0" color="8" />
+    <line x1="0.0875" y1="0.0" x2="0.0" y2="0.0" id="8f36099b-e7dd-41f2-b574-3949b4df4b46" layer="0" color="8" />
+    <line x1="0.0875" y1="-0.35" x2="0.0" y2="-0.35" id="5898d5db-6de8-4481-964d-bedb17508f87" layer="0" color="8" />
+    <line x1="0.7" y1="0.0" x2="0.7875" y2="0.0" id="6945e4b0-ba3b-4162-b2bc-dd9ef6051c3e" layer="0" color="8" />
+    <line x1="0.7" y1="-0.35" x2="0.7875" y2="-0.35" id="facefedc-387d-4235-8e13-80645020e2fb" layer="0" color="8" />
+    <text x="0.39375" y="0.1875" height="0.1" rotation="0.0" id="f3f72537-7b87-43c3-995e-e96427885d80" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.39375" y="0.34750000000000003" height="0.1" rotation="0.0" id="237fc319-3954-49a1-9dc6-9919a8acdbe6" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.39375" y="0.5075000000000001" height="0.1" rotation="0.0" id="95b36810-9c0f-4fb6-ba15-126c28c7875d" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+</block>

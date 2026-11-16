@@ -305,29 +305,39 @@ class Project:
     assets: dict = field(default_factory=dict)     # path -> bytes
     schema_version: int = SCHEMA_VERSION
 
-    def renumber_sheets(self) -> dict:
-        """Close the gaps: the numbered sheets become 01, 02, 03 ... in their current order (the cover
-        stays 00). Goto targets follow. -> {old page: new page} for the sheets that changed."""
-        old = sorted(self.sheets)
-        mapping, nxt = {}, 1
-        for pg in old:
-            if self.sheets[pg].cover:
-                mapping[pg] = pg
-            else:
-                mapping[pg] = nxt
-                nxt += 1
+    def _apply_order(self, order) -> dict:
+        """Give the numbered sheets (a list of their current pages, in the wanted order) the pages 01, 02, 03 ...
+        The cover stays 00. Goto targets follow. -> {old page: new page} for the sheets that changed."""
+        mapping = {pg: pg for pg, sh in self.sheets.items() if sh.cover}
+        for i, pg in enumerate(order, 1):
+            mapping[pg] = i
         changed = {a: b for a, b in mapping.items() if a != b}
         if changed:
             new = {}
-            for pg in old:
+            for pg in sorted(self.sheets):
                 sh = self.sheets[pg]
                 sh.page = mapping[pg]
                 new[sh.page] = sh
-            self.sheets = new
+            self.sheets = dict(sorted(new.items()))
             for sh in new.values():
                 for g in sh.gotos:
                     g.targets = [(n, mapping.get(p, p)) for n, p in g.targets]
         return changed
+
+    def renumber_sheets(self) -> dict:
+        """Close the gaps: the numbered sheets become 01, 02, 03 ... in their current order (the cover
+        stays 00). -> {old page: new page} for the sheets that changed."""
+        return self._apply_order([pg for pg in sorted(self.sheets) if not self.sheets[pg].cover])
+
+    def move_sheet(self, page: int, new_page: int) -> dict:
+        """Move a numbered sheet to position `new_page`; the sheets in between shift by one (move 2 to 3: the old 3
+        becomes 2). -> {old page: new page}."""
+        order = [pg for pg in sorted(self.sheets) if not self.sheets[pg].cover]
+        if page not in order:
+            raise ValueError("only numbered sheets can be moved")
+        order.remove(page)
+        order.insert(max(0, min(new_page - 1, len(order))), page)
+        return self._apply_order(order)
 
     def add_sheet(self, sheet: Sheet) -> Sheet:
         if sheet.page in self.sheets:

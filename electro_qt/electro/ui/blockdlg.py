@@ -59,6 +59,9 @@ class BlockDialog(QDialog):
         have = bk.label_lines_of(b) if b else ("description", "part_label", "tag")
         form.addRow(QLabel("Stacked label:"))
         self.pos = QComboBox(); self.pos.addItem("Above the part", "above"); self.pos.addItem("Right of the part", "right")
+        for lab, key in (("Inside, top left", "topleft"), ("Inside, top right", "topright"),
+                         ("Inside, bottom left", "bottomleft"), ("Inside, bottom right", "bottomright")):
+            self.pos.addItem(lab, key)
         self.pos.addItem("Inside the part (small)", "center")
         self.pos.setCurrentIndex(max(0, self.pos.findData(b.label_pos)) if b else 0)
         form.addRow("Position", self.pos)

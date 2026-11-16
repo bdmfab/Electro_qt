@@ -522,7 +522,7 @@ def free_ends(project, page, net, tol=1e-4):
 def goto_connectors(project, a, b, name):
     """Place a From connector on wire a (skipped when a is None: the wire already has one) and a To
     connector on wire b (each a (page, Net)), both called `name`, at a free end of the wire: From
-    where the wire leaves to the right, To where it arrives from the left, turned to suit.
+    at the left end when the wire has two free ends, To at the right end; a wire with one free end (the other end on a part) uses that end. Turned to suit.
     -> ([(page, 'From'|'To', (x, y), rotation, name)], [problems])."""
     out, bad = [], []
     for kind, w in (("From", a), ("To", b)):
@@ -533,8 +533,9 @@ def goto_connectors(project, a, b, name):
         if not ends:
             bad.append(f"Sheet {pg:02d}: the wire near x={net.anchor[0]:.2f} has no free end for a {kind}")
             continue
-        sg = 1 if kind == "From" else -1
-        p, d = max(ends, key=lambda e: (round(sg * e[1][0], 3), round(sg * e[0][0], 3)))
+        sg = 1 if kind == "From" else -1                  # sg turns the block: From points out of the wire, To's body too
+        pref = -sg                                       # when both ends are free: From on the left end, To on the right
+        p, d = max(ends, key=lambda e: (round(pref * e[1][0], 3), round(pref * e[0][0], 3)))
         ang = math.degrees(math.atan2(sg * d[1], sg * d[0]))
         out.append((pg, kind, p, round(ang, 3) % 360.0, name))
     return out, bad
@@ -577,6 +578,43 @@ def goto_plan(project, to_line_ids, from_line_id):
     if have:
         return have, None, this, val
     return next_connector_name(project, val), other, this, val
+
+
+def goto_renames(project):
+    """[(old name, new name)] for off-page connector sets whose wire number has changed (after a sheet was moved
+    and the numbers updated). A set BASE-k sits on wires numbered BASE; when they carry another number the set
+    becomes NEWBASE-k (the next free k if that name is taken). Names that do not look like BASE-k are left alone."""
+    seen, taken = {}, set()
+    for pg in sorted(project.sheets):
+        sh = project.sheets[pg]
+        nets = build_nets(project, sh)
+        for r in leaves(sh.entities):
+            if not isinstance(r, m.BlockRef) or not r.tag:
+                continue
+            blk = project.blocks.get(r.block)
+            if blk is None or not blk.connector:
+                continue
+            taken.add(r.tag)
+            if not blk.slots or not goto_names(r.tag)[1]:
+                continue
+            net = _net_at(nets, block_slots(blk, r)[0][1])
+            if net is None:
+                continue
+            val, _ = _net_value(net)
+            if val:
+                seen.setdefault(r.tag, set()).add(val)
+    out = {}
+    for tag, vals in sorted(seen.items()):
+        base, k = goto_names(tag)
+        if base in vals or len(vals) != 1:
+            continue                                    # still on its own number, or the ends disagree
+        new = next(iter(vals))
+        cand = f"{new}-{k}"
+        while cand in taken or cand in out.values():
+            k += 1
+            cand = f"{new}-{k}"
+        out[tag] = cand
+    return list(out.items())
 
 
 def goto_duplicates(project, duplicates):

@@ -218,3 +218,32 @@ A placed block now counts with its real extent (graphics + slots, rotated / mirr
 
 ## 0.15.1
 - The text editor has **Justify L / C / R** buttons. The choice applies to the whole text (its point is the left edge, middle or right edge) and is kept when you edit a text later; new texts start with the text style's justification.
+
+## 0.16.0 - Cover sheet
+- **Sheet > Add cover sheet**: the 11x17 sheet with the title block and zone markers taken away and the border stretched over their place. It is page 00, always the first tab, not counted in "01 OF nn", and exports as `Cover Sheet.pdf` / `.dxf` (first page of the merged job PDF).
+- It carries **COVER SHEET** centred on the sheet in 48 pt text, justified center. It is an ordinary text object: double-click to change the words, size, color or justification.
+- **Sheet > Cover sheet image...** places a picture above the text (fitted, aspect kept); **Remove cover sheet image** takes it away. One cover per project.
+
+## 0.16.1
+- The cover sheet image can be moved and resized (Select tool): click the picture to select it (dashed outline and four corner handles), drag it to move, drag a corner to resize (proportions kept, the opposite corner stays put). Undo/redo work; Esc deselects or cancels a drag. The position and size are saved with the sheet.
+
+## 0.17.0 - Sheet type and renumbering
+- **Sheet > Sheet type (1 / 2 columns)...** switches the current 11x17 sheet between 1 column (zones 00-24) and 2 columns (00-49) in either direction. The zone markers change; everything drawn stays. Press Update wire numbers afterwards, since zones feed the wire numbers.
+- **Deleting a sheet renumbers the rest automatically** (delete 02 and 03 becomes 02, 04 becomes 03 ...). **Sheet > Renumber sheets** does the same on demand for any gaps. The cover stays 00, tabs and "01 OF nn" follow, goto targets follow. Wire numbers are not recalculated until you press Update wire numbers; numbers you typed by hand are left as typed.
+
+## 0.18.0 - Open a DXF for geometry and blocks
+- **File > Open DXF (scratch tab)...** reads an ASCII DXF into its own tab (named "DXF: file.dxf"). The tab is not part of the project and not saved: use it as a work bench with the normal tools - select, **copy with a base point into any sheet**, or **Make block** from a selection (add Slot marks with the Slot tool first for wire numbers, then Library saves it like any block).
+- Units are asked each time, pre-selected from the file's own unit setting when it has one (inches, feet, millimeters, centimeters, meters). Everything is converted to inches, and the drawing is moved so its lower left corner sits near (1, 1).
+- Comes across: lines, arcs, circles, polylines (old and LWPOLYLINE, with curved segments as arcs), ellipses (as short lines), text and multi-line text (MTEXT formatting becomes plain text, alignment is kept), layers (color, dashed / dotted linetype) and per-object colors. Mirrored arcs are handled.
+- **The drawing's own blocks** (symbols placed with INSERT) come across as project blocks (Library > "This project only"; right-click > Save to shared library...), with rotation and mirror kept. A text/attribute "WIRE#" inside a block becomes a wire slot (T1, T2 ...). A block whose name is already in use is renamed "name_dxf". Inserts drawn with a scale other than 1 are placed as plain geometry.
+- Not brought across, and listed in a message after opening: splines, hatches, solids, dimensions, leaders, images and 3D objects. Binary DXF files are refused (save as ASCII DXF).
+- Closing the tab asks first if you changed it.
+
+## 0.18.1
+- Goto connectors: when a wire has two free ends, the **From** now goes on the **left** end and the **To** on the **right** end (it was the other way round). A wire with only one free end (the other end on a part's slot) still uses that end whichever side it is on, so no slot is needed to steer it.
+
+## 0.19.0 - Big blocks, label placement, Move sheet
+- **Selecting big blocks:** a placed block larger than 1.5 in (either way) is picked by clicking its lines, slots or text, not its empty inside, so a PLC across both columns no longer hides what is under it (a box dragged over the whole block still selects it). Smaller parts stay clickable anywhere on the body.
+- **Block label corners:** Make block / block properties > Stacked label > Position has new choices **Inside, top left / top right / bottom left / bottom right** (the text stack sits in that corner of the block instead of the middle of its box).
+- **Drag the label of one placed part:** select a part and a purple grip sits on its label; drag it anywhere (undoable). Right-click > **Reset label position** puts it back. The DXF export follows the dragged position.
+- **Sheet > Move sheet...:** give the current sheet another position (2 -> 3: the old 3 becomes 2). Tabs, "PAGE n OF m" and goto targets follow. Then press **Update wire numbers**: wire numbers are recalculated for the new pages, and **goto connectors are renamed to the new numbers** (07-1 becomes 09-1 when their wires became 09; the -k suffix is kept, bumped if the name is taken).

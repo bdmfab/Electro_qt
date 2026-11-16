@@ -659,6 +659,8 @@ class EditorScene(QGraphicsScene):
                 acts[menu.addAction("Edit block geometry...")] = lambda r=sel[0]: self.edit_block_requested.emit(r.block)
             if any(isinstance(e, m.BlockRef) for e in sel):
                 acts[menu.addAction("Explode block")] = self.explode_blocks
+            if any(isinstance(e, m.BlockRef) and ("label_dx" in e.props or "label_dy" in e.props) for e in sel):
+                acts[menu.addAction("Reset label position")] = self.reset_label_positions
             acts[menu.addAction("Make block...")] = self.make_block_dialog
             acts[menu.addAction("Array...")] = self.array_dialog
         if sel or clipboard.CLIP["items"]:
@@ -710,6 +712,11 @@ class EditorScene(QGraphicsScene):
             if isinstance(e, m.Circle):
                 kind, key, pt = circle_grip(e)
                 out.append((kind, key, pt, e))
+            elif isinstance(e, m.BlockRef):                 # drag the part's label (stacked text) somewhere else
+                blk = self.project.blocks.get(e.block)
+                pt = bk.label_anchor(self.project, self.sheet, blk, e) if blk is not None else None
+                if pt is not None:
+                    out.append(("label", 0, pt, e))
         return out
 
     def _grip_at(self, raw):
@@ -733,6 +740,9 @@ class EditorScene(QGraphicsScene):
             self.grip_anchor = other
             self.grip_drag = {"kind": kind, "key": key, "ent": e, "tops": [e],
                               "before": [(e, {"x1": e.x1, "y1": e.y1, "x2": e.x2, "y2": e.y2})]}
+        elif kind == "label":
+            self.grip_drag = {"kind": kind, "ent": e, "tops": [e], "before": [(e, {"props": dict(e.props)})],
+                              "pt": pt, "off": bk.label_offset(e)}
         else:
             self.grip_drag = {"kind": kind, "ent": e, "tops": [e], "before": [(e, {"r": e.r})]}
 
@@ -754,6 +764,10 @@ class EditorScene(QGraphicsScene):
                 e.x1, e.y1 = x, y
             else:
                 e.x2, e.y2 = x, y
+        elif kind == "label":
+            x, y = self.cursor.point
+            e.props["label_dx"] = f"{d['off'][0] + x - d['pt'][0]:.4f}"
+            e.props["label_dy"] = f"{d['off'][1] + y - d['pt'][1]:.4f}"
         else:
             x, y = self.cursor.point
             e.r = max(0.01, math.hypot(x - e.cx, y - e.cy))
@@ -771,11 +785,11 @@ class EditorScene(QGraphicsScene):
                 self.sync_refresh(t)
             return
         self.undo.push(StateCmd(self, d["tops"], d["before"], after,
-                                {"mid": "Move segment", "end": "Move end", "radius": "Resize circle"}[d["kind"]]))
+                                {"mid": "Move segment", "end": "Move end", "radius": "Resize circle", "label": "Move label"}[d["kind"]]))
 
     def _paint_grips(self, p, vs):
         h = 5.0 / vs
-        colors = {"end": "#4d9dff", "mid": "#7ad07a", "radius": "#ff9f43"}
+        colors = {"end": "#4d9dff", "mid": "#7ad07a", "radius": "#ff9f43", "label": "#c77dff"}
         for kind, key, (x, y), e in self.grips():
             active = (self.grip_drag is not None and self.grip_drag["ent"] is e and self.grip_drag["kind"] == kind) \
                 or self.grip_hover == (kind, key, id(e))
@@ -851,6 +865,16 @@ class EditorScene(QGraphicsScene):
         self.block_made.emit(blk)
         self._select_entities([ref])
         self.say(f"Block '{name}' saved to the library ({len(blk.slots)} slot(s))")
+
+    def reset_label_positions(self):
+        """Put the dragged labels of the selected parts back where the block defines them."""
+        refs = [e for e in self.selected_entities() if isinstance(e, m.BlockRef)
+                and ("label_dx" in e.props or "label_dy" in e.props)]
+        if not refs:
+            return
+        before = [(r, {"props": dict(r.props)}) for r in refs]
+        after = [(r, {"props": {k: v for k, v in r.props.items() if k not in ("label_dx", "label_dy")}}) for r in refs]
+        self.undo.push(StateCmd(self, refs, before, after, "Reset label position"))
 
     def explode_blocks(self):
         """Turn the selected placed parts back into plain drawing objects (and slot marks)."""
