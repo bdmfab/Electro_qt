@@ -39,6 +39,10 @@ def block_entities(block: m.BlockDef, ref: m.BlockRef):
         for t in leaves([c]):
             if isinstance(t, m.Text) and id(t) in upright:
                 t.rotation = upright[id(t)]
+                if t.source in LABEL_CODES and t.align in ("left", "right"):
+                    ca = math.cos(math.radians(ref.rotation))
+                    if ca < -0.3:                                # block turned round: the text stays on the outside
+                        t.align = "right" if t.align == "left" else "left"
         translate(c, ref.x, ref.y)
         out.append(c)
     return out
@@ -292,7 +296,7 @@ def make_block(name, entities, base, label_lines=(), label_pos="above", **data) 
 
 
 # ------------------------------------------------------------ edit a block's geometry
-EDIT_ORIGIN = (6.0, 6.0)          # where the block's origin sits on its editing sheet
+EDIT_ORIGIN = (5.95, 5.95)        # where the block's origin sits on its editing sheet: a major grid crossing (17 x 0.35)
 
 
 def edit_sheet(block: m.BlockDef) -> m.Sheet:
@@ -300,6 +304,7 @@ def edit_sheet(block: m.BlockDef) -> m.Sheet:
     SlotMark per slot, in slot order, with the block origin at EDIT_ORIGIN."""
     sh = m.Sheet(99, f"Block {block.name}")
     sh.width = sh.height = 12.0
+    sh.grid_x0, sh.zone0_y = 0.0, EDIT_ORIGIN[1]            # the major grid passes through the block origin
     ents = [clone_entity(e) for e in block.entities if not (isinstance(e, m.Text) and e.source in LABEL_CODES)]
     for e in ents:
         translate(e, *EDIT_ORIGIN)
@@ -318,7 +323,7 @@ def block_from_sheet(old: m.BlockDef, sheet: m.Sheet) -> m.BlockDef:
     new = make_block(old.name, list(sheet.entities), EDIT_ORIGIN, label_lines_of(old), old.label_pos,
                      description=old.description, part_number=old.part_number, manufacturer=old.manufacturer,
                      hyperlink=old.hyperlink, tag_prefix=old.tag_prefix, increment=old.increment,
-                     prefix_rule=old.prefix_rule, connector=old.connector, folder=old.folder, data=dict(old.data),
+                     prefix_rule=old.prefix_rule, connector=old.connector, exclude_bom=old.exclude_bom, folder=old.folder, data=dict(old.data),
                      poles=old.poles if same else None)
     for n, o in zip(new.slots, old.slots):                       # keep where the wire number prints
         n.num_dx, n.num_dy = o.num_dx, o.num_dy

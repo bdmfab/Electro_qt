@@ -85,6 +85,9 @@ class EditorScene(QGraphicsScene):
         self._press_time, self._press_on_item = 0.0, False
         self.grip_hover = None
         self.grip_anchor = None
+        self._grips_cache = None          # grips of the current selection (rebuilt when it or the geometry changes)
+        self.selectionChanged.connect(self._drop_grips)
+        self.undo.indexChanged.connect(self._drop_grips)
         self.preset_name = "3ph+PE"
         self.fillet_radius = 0.1
         self.chamfer_d1 = 0.1
@@ -292,6 +295,7 @@ class EditorScene(QGraphicsScene):
             self.addItem(self._logo_item)
 
     def _add_item(self, e, selected=False):
+        self._grips_cache = None
         it = build_item(e, self.layers, self._ref)
         if it is None:
             return
@@ -304,6 +308,7 @@ class EditorScene(QGraphicsScene):
         self._add_item(e)
 
     def sync_remove(self, eid):
+        self._grips_cache = None
         it = self._items.pop(eid, None)
         if it is not None:
             self.removeItem(it)
@@ -697,9 +702,20 @@ class EditorScene(QGraphicsScene):
                     e.style = m.Style(**{**vars(e.style), "color": ts.color})
 
     # ------------------------------------------------------------ grips (line ends / mid, circle radius)
+    def _drop_grips(self, *_):
+        self._grips_cache = None
+
     def grips(self):
         """[(kind, key, (x, y), entity)] for the selection. Selecting one line of a
-        joined run shows grips on the whole run; only OPEN ends get end grips."""
+        joined run shows grips on the whole run; only OPEN ends get end grips.
+        Cached until the selection or the geometry changes (it is asked for on every mouse move and repaint)."""
+        if self._grips_cache is not None and self.grip_drag is None:
+            return self._grips_cache
+        out = self._compute_grips()
+        self._grips_cache = out if self.grip_drag is None else None
+        return out
+
+    def _compute_grips(self):
         sel = self.selected_entities()
         out = []
         seeds = [e for e in sel if isinstance(e, m.Line)]

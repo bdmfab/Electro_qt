@@ -57,6 +57,9 @@ class PartDialog(QDialog):
         form = QFormLayout()
         form.addRow("Description", self.desc); form.addRow("Part number", self.part)
         form.addRow("Manufacturer", self.mfr); form.addRow("Tag", trow)
+        self.xbom = QCheckBox("Exclude from BOM")
+        self.xbom.setChecked(p.get("exclude_bom") == "1")
+        form.addRow(self.xbom)
         hidden = set(p.get("hide", "").split(","))
         self.show = {}
         form.addRow(QLabel("Label lines shown:"))
@@ -107,13 +110,15 @@ class PartDialog(QDialog):
         """-> (tag, props) for the part."""
         b, old = self.block, self.ref.props
         keep = {k: v for k, v in old.items()
-                if k not in ("description", "part_number", "manufacturer", "hide", "tag_mode", "tag_link")
+                if k not in ("description", "part_number", "manufacturer", "hide", "tag_mode", "tag_link", "exclude_bom")
                 and not k.startswith("term")}
         for key, widget, default in (("description", self.desc, b.description),
                                      ("part_number", self.part, b.part_number),
                                      ("manufacturer", self.mfr, b.manufacturer)):
             if widget.text().strip() != default:
                 keep[key] = widget.text().strip()
+        if self.xbom.isChecked():
+            keep["exclude_bom"] = "1"
         hide = [k for k, cb in self.show.items() if not cb.isChecked()]
         if hide:
             keep["hide"] = ",".join(hide)

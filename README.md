@@ -242,6 +242,33 @@ A placed block now counts with its real extent (graphics + slots, rotated / mirr
 ## 0.18.1
 - Goto connectors: when a wire has two free ends, the **From** now goes on the **left** end and the **To** on the **right** end (it was the other way round). A wire with only one free end (the other end on a part's slot) still uses that end whichever side it is on, so no slot is needed to steer it.
 
+## 0.19.7 - Part properties, grid origin, ortho, PDF centring, speed
+- **Exclude from BOM** is now a checkbox in Part properties (per placed part); it is no longer in the block dialog.
+- Editing a block: the block origin now sits on a major grid crossing (5.95, 5.95; the grid passes through it), so pasted geometry lands on the grid.
+- Ortho (F8) holds a drag (moving selected objects) to one axis, with Snap grid (F9) on or off.
+- PDF export: the frame (border + title block) is centred on the page, 0.25" all round.
+- Selecting many lines is lighter: line hit shapes are cached, grips are calculated once per selection (not on every mouse move / repaint) and the Properties panel refreshes once after the selection settles.
+
+## 0.19.6 - Number from the To
+- A wire no marked wire reaches, but that carries a goto connector named NUMBER-k, now takes NUMBER from the connector's name when wire numbers are updated (no "not reached" warning).
+
+## 0.19.5 - Goto never doubles a connector
+- Applying a goto no longer adds a From (or To) to a wire that already carries one. The existing connector is kept and the new end joins its name, e.g. a wire with From GND gets no GND-2; the other wire gets a To called GND. If the two wires already carry different names nothing is added and you are told.
+
+## 0.19.4 - Exclude from BOM, rotated labels
+- Block properties: **Exclude from BOM** checkbox (the part is left out of the bill of materials; saved with the block).
+- A block's label text (From cross-reference, etc.) flips to the outside when the block is turned round (180 degrees), instead of running back over the block.
+
+## 0.19.3 - One pass, no gaps
+- A To wire takes its From's number inside the same Update; it no longer uses up a count in global-counter schemes, so no gap is left on page 1.
+
+## 0.19.2 - From is the number source
+- Wires tied by a goto now take the number of the wire that carries the **From** (source); the To wires (destination) follow it, wherever they are. Before, the lowest sheet won, so a From on sheet 3 showed sheet 1's number. Typed/locked numbers still win. Connector names (NUMBER-k) follow after Update wire numbers.
+
+## 0.19.1 - Goto ends, typed numbers
+- Goto connectors: From defaults to the RIGHT end of a wire, To to the LEFT end. If a part (slot) sits on the default end, the other end is used.
+- Update wire numbers now says when wires have typed (override) numbers - they do not follow a moved sheet - and offers to switch them back to automatic and update again.
+
 ## 0.19.0 - Big blocks, label placement, Move sheet
 - **Selecting big blocks:** a placed block larger than 1.5 in (either way) is picked by clicking its lines, slots or text, not its empty inside, so a PLC across both columns no longer hides what is under it (a box dragged over the whole block still selects it). Smaller parts stay clickable anywhere on the body.
 - **Block label corners:** Make block / block properties > Stacked label > Position has new choices **Inside, top left / top right / bottom left / bottom right** (the text stack sits in that corner of the block instead of the middle of its box).

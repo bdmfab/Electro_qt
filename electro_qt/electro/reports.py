@@ -74,7 +74,7 @@ def bom(project):
             if not isinstance(r, m.BlockRef):
                 continue
             blk = project.blocks.get(r.block)
-            if blk is None or blk.connector:                 # off-page connectors are not parts
+            if blk is None or blk.connector or blk.exclude_bom or r.props.get("exclude_bom") == "1":   # off-page connectors / excluded parts are not in the BOM
                 continue
             pn = r.props.get("part_number", blk.part_number)
             mf = r.props.get("manufacturer", blk.manufacturer)

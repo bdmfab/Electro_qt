@@ -16,6 +16,7 @@ class PropertiesPanel(QDockWidget):
         super().__init__("Properties", parent)
         self.setObjectName("properties")
         self.scene = None
+        self._timer = None
         self._busy = False
         w = QWidget(); self.form = QFormLayout(w)
         self.info = QLabel("Nothing selected")
@@ -43,14 +44,14 @@ class PropertiesPanel(QDockWidget):
     def attach(self, scene):
         if self.scene is not None:
             try:
-                self.scene.selectionChanged.disconnect(self.refresh)
-                self.scene.undo.indexChanged.disconnect(self.refresh)
+                self.scene.selectionChanged.disconnect(self._later)
+                self.scene.undo.indexChanged.disconnect(self._later)
             except (RuntimeError, TypeError):
                 pass
         self.scene = scene
         if scene is not None:
-            scene.selectionChanged.connect(self.refresh)
-            scene.undo.indexChanged.connect(self.refresh)
+            scene.selectionChanged.connect(self._later)
+            scene.undo.indexChanged.connect(self._later)
         self.refresh()
 
     # ------------------------------------------------------------ show
@@ -63,8 +64,23 @@ class PropertiesPanel(QDockWidget):
             combo.addItem(icon, text, data) if icon else combo.addItem(text, data)
         combo.setCurrentIndex(0 if varies else max(0, combo.findData(value)))
 
+    def _later(self, *_):
+        """Selecting many objects fires selectionChanged over and over: refresh once, when things settle."""
+        if self._timer is None:
+            from PySide6.QtCore import QTimer
+            self._timer = QTimer(self)
+            self._timer.setSingleShot(True)
+            self._timer.setInterval(30)
+            self._timer.timeout.connect(self.refresh)
+        self._timer.start()
+
     def refresh(self, *_):
         sc = self.scene
+        try:
+            if sc is not None:
+                sc.sceneRect()                   # (the scene may already be gone)
+        except RuntimeError:
+            return
         sel = sc.selected_entities() if sc is not None else []
         ents = list(leaves(sel)) if sel else []
         self._busy = True

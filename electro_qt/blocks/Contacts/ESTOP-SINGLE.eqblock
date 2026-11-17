@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="ESTOP-SINGLE" description="DESC" part_number="xxxx" tag_prefix="ES" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" prefix_rule="" poles="1" label_pos="above" folder="Contacts" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="0.0" y1="0.0" x2="0.0875" y2="0.0" id="9179b02d-6f38-480d-8201-814a2ab3b796" layer="0" />
+    <line x1="0.35" y1="0.0" x2="0.2625" y2="0.0" id="59a74f46-13ad-4830-b3e3-9f72de292b65" layer="0" />
+    <line x1="0.0875" y1="0.0" x2="0.268688332" y2="-0.040492878" id="b219b6e3-19e7-4da2-91f7-32bec5f3423d" layer="0" />
+    <line x1="0.2625" y1="0.0" x2="0.2625" y2="-0.047815256" id="8ce9a1e9-5c78-43b3-a456-91097bcb7974" layer="0" />
+    <arc cx="0.17499999999999982" cy="-0.34999999999999964" r="0.5250000000000004" start="70.52877936550935" end="109.47122063449065" id="0bd82453-39ed-4128-8cca-31cf2b68e518" layer="0" />
+    <line x1="0.178094166" y1="-0.020246439" x2="0.178094166" y2="0.175" id="5158d452-3921-40ed-a94a-371a62e5d820" layer="0" />
+    <text x="0.175" y="0.2750000000000007" height="0.1" rotation="0.0" id="15731e00-4786-46dd-8d80-e2a683d7d6d6" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.175" y="0.4350000000000007" height="0.1" rotation="0.0" id="4b2b5dba-7117-4abe-9e1c-4f321cc14e83" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.175" y="0.5950000000000008" height="0.1" rotation="0.0" id="d73abf78-1d5c-4814-9da6-66608028f64f" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.35" y="0.0" num_dx="0.0" num_dy="0.0" />
+</block>

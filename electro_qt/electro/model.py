@@ -144,6 +144,7 @@ class BlockDef:
     manufacturer: str = ""
     data: dict = field(default_factory=dict)      # extra BOM fields
     increment: int = 0                            # 0 none, 1 = +1
+    exclude_bom: int = 0                          # 1 = left out of the bill of materials
     connector: int = 0                            # 1 = off-page connector: parts with the same tag are one wire
     prefix_rule: str = ""                         # e.g. "motor" -> L becomes T
     poles: int = 1

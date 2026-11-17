@@ -1044,6 +1044,24 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Wire numbers: {rep.numbered} of {rep.nets} wire(s) numbered, {n} line(s) changed"
                                      + (f", {len(renames)} goto name(s) updated" if renames else ""))
         warnings = list(rep.warnings)
+        if rep.overrides and not getattr(self, "_releasing", False):
+            r = QMessageBox.question(self, "Typed wire numbers",
+                                     f"{len(rep.overrides)} wire(s) have a typed (override) number, so Update leaves them "
+                                     "alone - they will not follow a moved sheet.\n\nSwitch them back to automatic and "
+                                     "update again? (Locked numbers stay.)")
+            if r == QMessageBox.StandardButton.Yes:
+                for sc in self._sheet_scenes():
+                    lines = [l for pg, net in rep.overrides if pg == sc.sheet.page for l in net.lines
+                             if l.number is not None and l.number.mode == "override"]
+                    if lines:
+                        sc.undo.push(EditCmd(sc, "Release typed numbers",
+                                             modify=[(l, {"number": m.WireNumber("auto", l.number.value)}) for l in lines]))
+                self._releasing = True
+                try:
+                    self.on_update_numbers()
+                finally:
+                    self._releasing = False
+                return
         if rep.duplicates:
             lines = []
             for val, members in rep.duplicates:

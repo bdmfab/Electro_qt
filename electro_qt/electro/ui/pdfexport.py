@@ -3,6 +3,7 @@
 from __future__ import annotations
 from PySide6.QtCore import Qt, QRectF, QSizeF, QMarginsF
 from PySide6.QtGui import QColor, QPainter, QPdfWriter, QPageSize, QPageLayout
+from .. import model as m
 from .items import THEME
 from .scene import EditorScene
 
@@ -34,8 +35,15 @@ def draw_sheet(painter: QPainter, project, sheet) -> None:
         painter.save()
         painter.translate(0, H)
         painter.scale(1, -1)                      # model coordinates are y-up
-        sc.render(painter, QRectF(0, 0, W, H), QRectF(0, 0, sheet.width, sheet.height),
-                  Qt.AspectRatioMode.IgnoreAspectRatio)
+        src = QRectF(0, 0, sheet.width, sheet.height)
+        from ..blocks import bounds
+        try:
+            bb = bounds([e for e in sheet.frame if not isinstance(e, m.Text)]) if sheet.frame else None
+        except Exception:
+            bb = None
+        if bb is not None:                                # centre the drawn frame (border + title block) on the page
+            src.translate((bb[0] + bb[2]) / 2 - sheet.width / 2, (bb[1] + bb[3]) / 2 - sheet.height / 2)
+        sc.render(painter, QRectF(0, 0, W, H), src, Qt.AspectRatioMode.IgnoreAspectRatio)
         painter.restore()
         sc.clear()
         sc.deleteLater()

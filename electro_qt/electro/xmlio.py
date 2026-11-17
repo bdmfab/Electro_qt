@@ -171,7 +171,7 @@ def block_to_xml(b: m.BlockDef) -> ET.Element:
     el = ET.Element("block", name=b.name, description=b.description,
                     part_number=b.part_number, tag_prefix=b.tag_prefix,
                     hyperlink=b.hyperlink, manufacturer=b.manufacturer,
-                    increment=str(b.increment), connector=str(b.connector), prefix_rule=b.prefix_rule,
+                    increment=str(b.increment), connector=str(b.connector), exclude_bom=str(b.exclude_bom), prefix_rule=b.prefix_rule,
                     poles=str(b.poles), label_pos=b.label_pos, folder=b.folder,
                     terminal_text_editable=_fmt(b.terminal_text_editable))
     for k, v in b.data.items():
@@ -191,7 +191,7 @@ def block_from_xml(el: ET.Element) -> m.BlockDef:
     b = m.BlockDef(el.get("name"), el.get("description", ""),
                    el.get("part_number", ""), el.get("tag_prefix", ""),
                    el.get("hyperlink", ""), el.get("manufacturer", ""),
-                   increment=int(el.get("increment", "0")), connector=int(el.get("connector", "0")),
+                   increment=int(el.get("increment", "0")), connector=int(el.get("connector", "0")), exclude_bom=int(el.get("exclude_bom", "0")),
                    prefix_rule=el.get("prefix_rule", ""),
                    poles=int(el.get("poles", "1")), label_pos=el.get("label_pos", "right"), folder=el.get("folder", ""),
                    terminal_text_editable=el.get("terminal_text_editable") == "1")

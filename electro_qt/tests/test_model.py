@@ -605,12 +605,12 @@ def test_edit_block_roundtrip():
     sh = bk.edit_sheet(old)
     assert not any(isinstance(e, m.Text) for e in sh.entities)            # label text is rebuilt, not edited
     marks = [e for e in sh.entities if isinstance(e, m.SlotMark)]
-    assert [(round(k.x, 6), round(k.y, 6), k.terminal) for k in marks] == [(6.0, 6.0, "1"), (7.0, 6.0, "2")]
+    assert [(round(k.x, 6), round(k.y, 6), k.terminal) for k in marks] == [(5.95, 5.95, "1"), (6.95, 5.95, "2")]
     same = bk.block_from_sheet(old, sh)
     assert [(s.x, s.y, s.terminal) for s in same.slots] == [(0, 0, "1"), (1, 0, "2")] and same.slots[1].num_dx == 0.2
     assert bk.label_lines_of(same) == ("description", "tag") and same.part_number == "X1" and same.data == {"V": "24"}
-    marks[1].x = 7.5                                                       # move a slot, add a third, change geometry
-    sh.entities.append(m.SlotMark(8.0, 6.0, "3"))
+    marks[1].x = bk.EDIT_ORIGIN[0] + 1.5                                                       # move a slot, add a third, change geometry
+    sh.entities.append(m.SlotMark(bk.EDIT_ORIGIN[0] + 2.0, bk.EDIT_ORIGIN[1], "3"))
     sh.entities[0].x2 += 0.5
     new = bk.block_from_sheet(old, sh)
     assert [round(s.x, 6) for s in new.slots] == [0, 1.5, 2.0] and new.poles == 1
@@ -705,8 +705,8 @@ def test_goto_connectors():
     put, bad = nb.goto_connectors(p, a, b, name)
     assert not bad
     (pg1, k1, pt1, r1, n1), (pg2, k2, pt2, r2, n2) = put
-    assert (pg1, k1, pt1, r1) == (1, "From", (1, 5), 180.0)                      # both ends free: From on the left end
-    assert (pg2, k2, pt2, r2) == (2, "To", (3, 5), 180.0)                        # To on the right end
+    assert (pg1, k1, pt1, r1) == (1, "From", (3, 5), 0.0)                        # both ends free: From on the right end
+    assert (pg2, k2, pt2, r2) == (2, "To", (1, 5), 0.0)                          # To on the left end
     assert n1 == n2 == "02041-1"
     # place the connectors: the wires are now one group, no longer duplicates, numbers unchanged
     for pg, kind, pt, rot, nm in put:
@@ -1019,7 +1019,7 @@ def test_goto_uses_the_free_end_whichever_side():
     put, bad = nb.goto_connectors(p, (1, na), (2, nbn), "7-1")
     (_, k1, pt1, r1, _), (_, k2, pt2, r2, _) = put
     assert pt1 == (0, 5) and r1 == 180.0                 # the part holds the right end, so the From takes the left end
-    assert pt2 == (3, 5)
+    assert pt2 == (0, 5)
 
 
 def test_move_sheet():
@@ -1075,3 +1075,98 @@ def test_block_label_corners_and_part_offset():
     r.props["label_dx"], r.props["label_dy"] = "1.5", "-0.25"
     moved = bk.label_anchor(p, sh, b, r)
     assert abs(moved[0] - home[0] - 1.5) < 1e-9 and abs(moved[1] - home[1] + 0.25) < 1e-9
+
+
+def test_update_reports_override_wires():
+    from electro import numbering as nb
+    p = m.Project("o"); sh = p.add_sheet(m.Sheet(1))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    ln = m.Line(1, 5, 3, 5, m.Style("W")); ln.number = m.WireNumber("override", "00099")
+    sh.entities.append(ln)
+    rep = nb.update(p)
+    assert len(rep.overrides) == 1
+
+
+def test_from_wire_is_the_number_source():
+    from electro import numbering as nb, blocks as bk
+    p = m.Project("s")
+    s1 = p.add_sheet(m.Sheet(1)); s3 = p.add_sheet(m.Sheet(3))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<page><zone><incident>")
+    for k in ("from", "to"):
+        b = bk.default_connector_block(k); p.blocks[b.name] = b
+    l1 = m.Line(1, 5, 3, 5, m.Style("W")); l1.mark = "1"
+    l3 = m.Line(1, 5, 3, 5, m.Style("W")); l3.mark = "1"
+    s1.entities += [l1, m.BlockRef("To", 1, 5, 0)]
+    s3.entities += [l3, m.BlockRef("From", 3, 5, 0)]
+    for r in (s1.entities[-1], s3.entities[-1]):
+        r.tag = "X-1"
+    rep = nb.update(p)
+    v3 = [num.value for l, num in rep.changes.get(3, [])]
+    v1 = [num.value for l, num in rep.changes.get(1, [])]
+    assert v3 and v1 and v1[0] == v3[0] and v3[0].startswith("03")
+
+
+def test_to_wire_uses_no_global_count():
+    from electro import numbering as nb, blocks as bk
+    p = m.Project("c")
+    s1 = p.add_sheet(m.Sheet(1)); s3 = p.add_sheet(m.Sheet(3))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    for k in ("from", "to"):
+        b = bk.default_connector_block(k); p.blocks[b.name] = b
+    la = m.Line(1, 5, 3, 5, m.Style("W")); la.mark = "1"      # sheet 1: the To wire
+    lb = m.Line(1, 3, 3, 3, m.Style("W")); lb.mark = "1"      # sheet 1: an ordinary wire
+    lc = m.Line(1, 5, 3, 5, m.Style("W")); lc.mark = "1"      # sheet 3: the From wire
+    ra = m.BlockRef("To", 1, 5, 0); ra.tag = "X-1"; rc = m.BlockRef("From", 3, 5, 0); rc.tag = "X-1"
+    s1.entities += [la, lb, ra]; s3.entities += [lc, rc]
+    rep = nb.update(p)
+    v = {l.id: n.value for pg in rep.changes for l, n in rep.changes[pg]}
+    assert v[la.id] == v[lc.id] and v[lb.id] != v[la.id]
+    nums = sorted(v.values())
+    assert len(set(nums)) == 2 and int(nums[1]) - int(nums[0]) == 1      # no gap left by the To wire
+
+
+def test_exclude_from_bom_and_rotated_label():
+    from electro import reports, blocks as bk, xmlio
+    p = m.Project("x"); sh = p.add_sheet(m.Sheet(1))
+    b = bk.make_block("PB", [m.Line(0, 0, 1, 0, m.Style("0")), m.SlotMark(0, 0, "1")], (0, 0), ("xref",), "right",
+                      part_number="A1")
+    p.blocks["PB"] = b
+    sh.entities.append(m.BlockRef("PB", 2, 2))
+    assert len(reports.bom(p)[1]) == 1
+    sh.entities[-1].props["exclude_bom"] = "1"                 # per placed part (Part properties)
+    assert reports.bom(p)[1] == []
+    del sh.entities[-1].props["exclude_bom"]
+    b.exclude_bom = 1
+    assert reports.bom(p)[1] == []
+    assert xmlio.block_from_xml(xmlio.block_to_xml(b)).exclude_bom == 1
+    b.exclude_bom = 0
+    t0 = [t for t in bk.block_entities(b, m.BlockRef("PB", 0, 0, 0)) if isinstance(t, m.Text)][0]
+    t1 = [t for t in bk.block_entities(b, m.BlockRef("PB", 0, 0, 180)) if isinstance(t, m.Text)][0]
+    assert t0.align == "left" and t1.align == "right" and t1.x < t0.x
+
+
+def test_goto_reuses_existing_connector():
+    from electro import numbering as nb, blocks as bk
+    p = m.Project("r"); s1 = p.add_sheet(m.Sheet(1)); s3 = p.add_sheet(m.Sheet(3))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<g_incident>")
+    for k in ("from", "to"):
+        b = bk.default_connector_block(k); p.blocks[b.name] = b
+    la = m.Line(1, 5, 3, 5, m.Style("W")); lb = m.Line(1, 5, 3, 5, m.Style("W"))
+    fr = m.BlockRef("From", 3, 5, 0); fr.tag = "GND"                     # the wire already has a From
+    s3.entities += [la, fr]; s1.entities += [lb]
+    na = nb.build_nets(p, s3)[0]; nbn = nb.build_nets(p, s1)[0]
+    put, bad = nb.goto_connectors(p, (3, na), (1, nbn), "GND-2")
+    assert [(pg, k, n) for pg, k, _, _, n in put] == [(1, "To", "GND")]    # no second From; the To joins GND
+
+
+def test_unnumbered_wire_takes_number_from_its_to():
+    from electro import numbering as nb, blocks as bk
+    p = m.Project("t"); s1 = p.add_sheet(m.Sheet(1))
+    p.layers["W"] = m.Layer("W", 5, "wire", True, "<page><zone><incident>")
+    for k in ("from", "to"):
+        b = bk.default_connector_block(k); p.blocks[b.name] = b
+    ln = m.Line(1, 5, 3, 5, m.Style("W"))                     # not marked, nothing reaches it
+    to = m.BlockRef("To", 1, 5, 0); to.tag = "03000-1"
+    s1.entities += [ln, to]
+    rep = nb.update(p)
+    assert [n.value for _, n in rep.changes[1]] == ["03000"] and not rep.unreached

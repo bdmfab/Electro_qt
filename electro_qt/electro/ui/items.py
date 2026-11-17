@@ -55,6 +55,22 @@ def make_pen(entity, layers, selected=False) -> QPen:
     return pen
 
 
+def _drag_pos(ss, value):
+    """Where a dragged object may go: ortho keeps the drag on one axis (whether or not the grid snaps),
+    the grid rounds what is left."""
+    x, y = value.x(), value.y()
+    if ss.ortho:
+        if abs(x) >= abs(y):
+            y = 0.0
+        else:
+            x = 0.0
+    if ss.grid:
+        step = ss.grid_step
+        x, y = round(x / step) * step, round(y / step) * step
+    return QPointF(x, y)
+
+
+
 class _Common:
     """Shared selection/move behaviour. Subclasses call _setup()."""
 
@@ -78,24 +94,28 @@ class _Common:
             self._restyle(bool(value))
         elif change == QGraphicsItem.GraphicsItemChange.ItemPositionChange:
             sc = self._scene_ref()
-            if sc is not None and sc.snap_settings.grid:
-                step = sc.snap_settings.grid_step
-                return QPointF(round(value.x() / step) * step, round(value.y() / step) * step)
+            if sc is not None:
+                return _drag_pos(sc.snap_settings, value)
         return super().itemChange(change, value)
 
 
 class LineItem(_Common, QGraphicsLineItem):
     def __init__(self, e: m.Line, layers, scene_ref):
         super().__init__(e.x1, e.y1, e.x2, e.y2)
+        self._shape = None
         self._setup(e, layers, scene_ref)
 
-    def shape(self):
-        p = QPainterPath(self.line().p1()); p.lineTo(self.line().p2())
-        s = QPainterPathStroker(); s.setWidth(HIT_WIDTH)
-        return s.createStroke(p)
+    def shape(self):                       # (cached: asked for constantly while selecting / repainting)
+        if self._shape is None:
+            p = QPainterPath(self.line().p1()); p.lineTo(self.line().p2())
+            s = QPainterPathStroker(); s.setWidth(HIT_WIDTH)
+            self._shape = s.createStroke(p)
+        return self._shape
 
     def boundingRect(self):
-        return self.shape().boundingRect()
+        if getattr(self, "_bounds", None) is None:
+            self._bounds = self.shape().boundingRect()
+        return self._bounds
 
     def paint(self, painter, option, widget=None):
         painter.setPen(self.pen()); painter.drawLine(self.line())
@@ -327,9 +347,8 @@ class GroupItem(QGraphicsItemGroup):
             self._restyle(bool(value))
         elif change == QGraphicsItem.GraphicsItemChange.ItemPositionChange:
             sc = self._scene_ref()
-            if sc is not None and sc.snap_settings.grid:
-                step = sc.snap_settings.grid_step
-                return QPointF(round(value.x() / step) * step, round(value.y() / step) * step)
+            if sc is not None:
+                return _drag_pos(sc.snap_settings, value)
         return super().itemChange(change, value)
 
     def shape(self):                       # outline only, not the empty interior

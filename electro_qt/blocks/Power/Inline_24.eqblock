@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="Inline_24" description="24 VDC" part_number="xxxx" tag_prefix="" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" prefix_rule="" poles="1" label_pos="above" folder="Power" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="0.0" y1="0.0" x2="0.0875" y2="0.0" id="e271d90b-2f70-45ae-be14-2b46c555dfb1" layer="0" />
+    <line x1="0.0" y1="-0.7" x2="0.0875" y2="-0.7" id="c7adfd11-2779-49c9-a27a-9c1274bc053b" layer="0" />
+    <line x1="0.7875" y1="0.0" x2="0.875" y2="0.0" id="01a02547-aaed-475c-af96-6f6dc598f39d" layer="0" />
+    <line x1="0.7875" y1="-0.35" x2="0.875" y2="-0.35" id="2e35f3af-ac68-4695-9b22-2ee01b9b2684" layer="0" />
+    <text x="0.1272368098091068" y="-0.04776319019089392" resolved="&lt;size=0.833&gt;L1&lt;/size&gt;" height="0.12" rotation="0.0" id="5a4e4601-24da-483f-9b71-d505c2390629" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;L1&lt;/size&gt;</source>
+    </text>
+    <text x="0.1241125768428164" y="-0.39171098029713747" resolved="&lt;size=0.833&gt;L2&lt;/size&gt;" height="0.12" rotation="0.0" id="30aecc30-6521-4fb9-9f17-c92558acf792" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;L2&lt;/size&gt;</source>
+    </text>
+    <text x="0.7626130677443896" y="-0.04781601092270904" resolved="&lt;size=0.833&gt;+24&lt;/size&gt;" height="0.12" rotation="0.0" id="3f21a336-40e2-47c9-ab91-a6aa0e566ea2" align="right" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;+24&lt;/size&gt;</source>
+    </text>
+    <text x="0.7602249082348456" y="-0.3940991398066842" resolved="&lt;size=0.833&gt;0V&lt;/size&gt;" height="0.12" rotation="0.0" id="34c09055-1784-43ff-928e-5d4213646fa9" align="right" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;0V&lt;/size&gt;</source>
+    </text>
+    <line x1="0.0875" y1="-0.7875" x2="0.7875" y2="-0.7875" id="ee71d239-1e7f-4002-8361-055f0061463c" layer="0" color="8" />
+    <line x1="0.7875" y1="-0.7875" x2="0.7875" y2="0.0875" id="ed0adaa9-b74c-46b9-ad4b-5361ae1c03aa" layer="0" color="8" />
+    <line x1="0.7875" y1="0.0875" x2="0.0875" y2="0.0875" id="1c6d644e-68e4-4a1d-aa4d-d93ba812edb5" layer="0" color="8" />
+    <line x1="0.0875" y1="0.0875" x2="0.0875" y2="-0.7875" id="ce93793c-0eb1-44e6-8013-6faa5f138c91" layer="0" color="8" />
+    <line x1="0.0" y1="-0.35" x2="0.0875" y2="-0.35" id="ab9320b9-d48b-4f8e-bed7-f030cdb6ac38" layer="0" />
+    <text x="0.1241125768428164" y="-0.7417109802971371" resolved="&lt;size=0.833&gt;PE&lt;/size&gt;" height="0.12" rotation="0.0" id="23b76a05-d4b0-4324-8f81-d6b93fbd503e" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;PE&lt;/size&gt;</source>
+    </text>
+    <text x="0.5073065338721948" y="0.1875" height="0.1" rotation="0.0" id="ad814757-2e95-4565-a196-c0c328a30ea3" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.5073065338721948" y="0.34750000000000003" height="0.1" rotation="0.0" id="9fda2a79-b375-4a93-94de-26fd4bf429fc" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.5073065338721948" y="0.5075000000000001" height="0.1" rotation="0.0" id="96565ede-107f-4d4e-8a63-d94c1f76d7c5" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+</block>

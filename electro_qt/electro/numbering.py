@@ -290,11 +290,12 @@ class Report:
     warnings: list = field(default_factory=list)
     duplicates: list = field(default_factory=list)   # [(number, [(page, Net), ...])] genuine repeats
     unreached: list = field(default_factory=list)    # [(page, (x, y))] wires no marked wire reaches
+    overrides: list = field(default_factory=list)   # [(page, Net)] wires with a typed (override) number: left alone
     numbered: int = 0
     nets: int = 0
 
 
-def connector_groups(project, sheets_nets, names=None):
+def connector_groups(project, sheets_nets, names=None, sources=None):
     """[[Net, ...]] nets joined through off-page connectors (blocks flagged `connector` that
     share a tag), page order. sheets_nets = {page: nets}."""
     byname = {}
@@ -309,6 +310,8 @@ def connector_groups(project, sheets_nets, names=None):
             n = _net_at(sheets_nets[pg], block_slots(blk, r)[0][1])
             if n is not None and n not in byname.setdefault(r.tag, []):
                 byname[r.tag].append(n)
+            if n is not None and sources is not None and blk.name.lower().startswith("from"):
+                sources.add(id(n))                       # the wire holding a From is the source of the number
     out = []
     for tag, g in byname.items():
         if len(g) > 1:
@@ -332,7 +335,8 @@ def update(project) -> Report:
             n.page = pg
         data[pg] = (nets, block_links(project, project.sheets[pg], nets))
     group_names = []
-    groups = connector_groups(project, {pg: data[pg][0] for pg in pages}, group_names)
+    sources = set()
+    groups = connector_groups(project, {pg: data[pg][0] for pg in pages}, group_names, sources)
     group_of = {id(n): gi for gi, g in enumerate(groups) for n in g}
 
     # ---- incident counting, across sheets
@@ -391,7 +395,10 @@ def update(project) -> Report:
             if modes:                                    # typed / locked: left alone, shared by the net
                 n.mode, n.value = modes[0].mode, modes[0].value
                 n.fixed = True
-            elif gid is not None and first_value.get(gid):
+            elif gid is not None and id(n) not in sources and any(id(x) in sources for x in groups[gid]) \
+                    and not first_value.get(gid):
+                n.value = "~"                            # a To: takes its From's number (set below); uses no count
+            elif gid is not None and first_value.get(gid) and id(n) not in sources:
                 n.value = first_value[gid]               # the other end of a connector: same wire
             elif n.incident is not None or (glob and not needs_inc):
                 if n.incident is not None and n.incident > 9 and needs_inc:
@@ -400,17 +407,30 @@ def update(project) -> Report:
                 if "<g_incident>" in scheme:
                     g_count += 1
                 n.value = format_number(scheme, project, sh, n, n.incident if n.incident is not None else 0, g_count, n.pinc or 0)
+            elif _connector_number(project, pg, n):
+                n.value = _connector_number(project, pg, n)      # no marked wire reaches it: the number named on its connector
             else:
                 rep.warnings.append(f"Sheet {pg:02d}: a wire near x={n.anchor[0]:.2f}, "
                                     f"zone {zone_of(sh, *n.anchor):02d} is not reached from any marked wire")
                 rep.unreached.append((pg, n.anchor))
                 n.numbered = False
                 continue
-            if gid is not None and n.value and (gid not in first_value or n.fixed):
+            if gid is not None and n.value and (gid not in first_value or n.fixed or id(n) in sources):
                 first_value[gid] = n.value               # a typed number wins over the first one
     # a typed number on one end of a connector wins on the others
     for gi, g in enumerate(groups):
         val = first_value.get(gi)
+        src = [n for n in g if id(n) in sources and n.numbered]
+        for n in g:                                      # a To whose From was never numbered is not numbered either
+            if n.value == "~" and not any(x.numbered and x.value != "~" for x in g if id(x) in sources):
+                cn = _connector_number(project, n.page, n)
+                if cn:
+                    n.value = cn
+                else:
+                    n.numbered = False
+        if src and not any(n.fixed for n in g):          # From = source: its number is the one the To wires take
+            val = src[0].value
+            first_value[gi] = val
         for n in g:
             if val and n.numbered and not n.fixed and n.value != val:
                 n.value = val
@@ -422,6 +442,8 @@ def update(project) -> Report:
             if not n.numbered:
                 continue
             if n.fixed:
+                if n.mode == "override":
+                    rep.overrides.append((pg, n))
                 new = [(l, m.WireNumber(n.mode, n.value)) for l in n.lines
                        if l.number is None or (l.number.mode, l.number.value) != (n.mode, n.value)]
             else:
@@ -519,14 +541,49 @@ def free_ends(project, page, net, tol=1e-4):
     return out
 
 
+def existing_connector(project, page, net, kind, tol=1e-4):
+    """Tag of a From / To connector already placed on this wire (any end), '' when it has no name, None when
+    the wire carries none."""
+    from . import blocks as bk
+    for e in leaves(project.sheets[page].entities):
+        if not isinstance(e, m.BlockRef):
+            continue
+        blk = project.blocks.get(e.block)
+        if blk is None or not blk.connector or not blk.name.lower().startswith(kind.lower()):
+            continue
+        slots = bk.block_slots(blk, e)
+        if slots and any(_on_segment(slots[0][1], l) for l in net.lines):
+            return e.tag or ""
+    return None
+
+
+def _connector_number(project, page, net):
+    """The wire number a goto connector on this wire names (NUMBER-k -> NUMBER), '' when it has none."""
+    for kind in ("To", "From"):
+        tag = existing_connector(project, page, net, kind)
+        if tag and goto_names(tag)[1] > 0:
+            return goto_names(tag)[0]
+    return ""
+
+
 def goto_connectors(project, a, b, name):
     """Place a From connector on wire a (skipped when a is None: the wire already has one) and a To
     connector on wire b (each a (page, Net)), both called `name`, at a free end of the wire: From
     at the left end when the wire has two free ends, To at the right end; a wire with one free end (the other end on a part) uses that end. Turned to suit.
     -> ([(page, 'From'|'To', (x, y), rotation, name)], [problems])."""
     out, bad = [], []
+    have = {}                                              # kind -> tag of a connector the wire already carries
     for kind, w in (("From", a), ("To", b)):
-        if w is None:
+        if w is not None:
+            have[kind] = existing_connector(project, w[0], w[1], kind)
+    tags = {t for t in have.values() if t}
+    if len(tags) == 1:
+        name = tags.pop()                                  # the other end joins the connector that is already there
+    elif len(tags) > 1:
+        bad.append(f"The wires already carry connectors with different names ({', '.join(sorted(tags))}); nothing added")
+        return out, bad
+    for kind, w in (("From", a), ("To", b)):
+        if w is None or have.get(kind) is not None:       # a From / To is already on this wire: no second one
             continue
         pg, net = w
         ends = free_ends(project, pg, net)
@@ -534,7 +591,7 @@ def goto_connectors(project, a, b, name):
             bad.append(f"Sheet {pg:02d}: the wire near x={net.anchor[0]:.2f} has no free end for a {kind}")
             continue
         sg = 1 if kind == "From" else -1                  # sg turns the block: From points out of the wire, To's body too
-        pref = -sg                                       # when both ends are free: From on the left end, To on the right
+        pref = sg                                        # when both ends are free: From on the right end, To on the left
         p, d = max(ends, key=lambda e: (round(pref * e[1][0], 3), round(pref * e[0][0], 3)))
         ang = math.degrees(math.atan2(sg * d[1], sg * d[0]))
         out.append((pg, kind, p, round(ang, 3) % 360.0, name))
