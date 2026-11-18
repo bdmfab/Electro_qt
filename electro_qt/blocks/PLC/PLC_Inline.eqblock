@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="PLC_Inline" description="Main PLC" part_number="P1-622" tag_prefix="PLC" hyperlink="" manufacturer="Automation Direct" increment="0" connector="0" exclude_bom="0" fp_w="1.45" fp_h="3.76" fp_d="3.82" mount="rail" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="PLC" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="0.0" y1="0.0" x2="0.175" y2="0.0" id="bfe9aa14-037a-4b1d-bb8c-f68c632ef195" layer="0" />
+    <line x1="0.175" y1="0.0" x2="0.175" y2="0.175" id="8007ded5-dc02-47e9-9448-1ac8bb0e7171" layer="0" />
+    <line x1="0.175" y1="0.175" x2="0.525" y2="0.175" id="84205bcc-e9c4-447d-ba03-0f6cb33da6d2" layer="0" />
+    <line x1="0.525" y1="0.175" x2="0.525" y2="-0.175" id="852e0219-50a4-415a-a9b7-065494506861" layer="0" />
+    <line x1="0.525" y1="-0.175" x2="0.175" y2="-0.175" id="fe6c8a59-d257-4b90-a1c6-34f6c0eecc55" layer="0" />
+    <line x1="0.175" y1="-0.175" x2="0.175" y2="0.0" id="72b40445-d633-473e-9ee5-9371e3c917dc" layer="0" />
+    <line x1="0.525" y1="0.0" x2="0.7" y2="0.0" id="62730973-c338-41ca-98a5-27943025e826" layer="0" />
+    <text x="0.35" y="0.275" height="0.1" rotation="0.0" id="853bc93d-a70a-4d87-bd4f-2888b6b211ba" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.35" y="0.43500000000000005" height="0.1" rotation="0.0" id="47f2fc12-79cb-4645-8e18-57cc59b245ad" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.35" y="0.5950000000000001" height="0.1" rotation="0.0" id="6a46ff3e-f4f9-4047-b516-573899500c4f" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.7" y="0.0" num_dx="0.0" num_dy="0.0" />
+</block>

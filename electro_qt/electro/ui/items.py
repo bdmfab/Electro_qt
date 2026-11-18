@@ -95,8 +95,11 @@ class _Common:
         elif change == QGraphicsItem.GraphicsItemChange.ItemPositionChange:
             sc = self._scene_ref()
             if sc is not None:
-                return _drag_pos(sc.snap_settings, value)
+                return self._snap_move(sc, _drag_pos(sc.snap_settings, value))
         return super().itemChange(change, value)
+
+    def _snap_move(self, sc, v):
+        return v
 
 
 class LineItem(_Common, QGraphicsLineItem):
@@ -137,6 +140,230 @@ class RectItem(_Common, QGraphicsRectItem):
     def paint(self, painter, option, widget=None):
         painter.setPen(self.pen()); painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRect(self.rect())
+
+
+PANEL_COLORS = {"plate": ("#3a4048", "#e9ecef"), "rail": ("#8aa0b8", "#9db2c8"),
+                "duct": ("#c9b458", "#e3d28a"), "part": ("#4f8fd0", "#a9cdf0"),
+                "terminals": ("#3fae8f", "#9fdcc9")}      # (dark, light) fill
+
+
+class PanelItem(_Common, QGraphicsRectItem):
+    """A panel layout object (back plate, DIN rail, wire duct, part footprint) drawn to scale: its box, its
+    label, a part's DIN rail centre line and a small lock mark on a locked rail / duct."""
+
+    def __init__(self, e: m.PanelObj, layers, scene_ref):
+        from .. import panel as pn
+        x0, y0, x1, y1 = pn.box(e)
+        super().__init__(QRectF(x0, y0, x1 - x0, y1 - y0))
+        self.setZValue({"plate": -10, "rail": -5, "duct": -4}.get(e.kind, 0))
+        self._setup(e, layers, scene_ref)
+        if e.locked and e.kind in ("rail", "duct"):
+            self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+
+    def shape(self):
+        p = QPainterPath()
+        p.addRect(self.rect())
+        if self._entity.kind == "plate":             # only the edge: the plate must not swallow clicks on what is on it
+            s = QPainterPathStroker(); s.setWidth(HIT_WIDTH * 2)
+            return s.createStroke(p)
+        return p
+
+    def boundingRect(self):
+        return self.rect().adjusted(-0.05, -0.05, 0.05, 0.05)
+
+    def _label(self):
+        from .. import panel as pn
+        e = self._entity
+        if e.kind == "terminals":
+            return e.block, f"x{e.qty}"
+        if e.kind == "part":
+            return e.tag or e.block, e.block if e.tag and e.block != e.tag else ""
+        if e.kind == "rail":
+            return "DIN rail", ""
+        if e.kind == "duct":
+            return f"Duct {e.h:g} x {e.depth:g}" if e.depth else "Duct", ""
+        return pn.KIND_NAMES["plate"], f"{e.w:g} x {e.h:g}"
+
+    def _snap_move(self, sc, v):
+        """While dragging on the panel layout, the selection's edges / centres snap to the other objects (or sit
+        the panel gap away from their sides). Every selected item computes the same answer from the same drag."""
+        from .. import panel as pn
+        if not sc.sheet.panel:
+            return v
+        sel = [e for e in sc.selected_entities() if isinstance(e, m.PanelObj)]
+        if not sel:
+            return v
+        bx = [pn.box(e) for e in sel]
+        x0, y0 = min(b[0] for b in bx), min(b[1] for b in bx)
+        x1, y1 = max(b[2] for b in bx), max(b[3] for b in bx)
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        nx, ny, _ = pn.snap_box(pn.panel_objects(sc.sheet.entities), cx + v.x(), cy + v.y(), x1 - x0, y1 - y0,
+                                10.0 / sc.view_scale, sc.panel_gap, exclude=sel)
+        dx, dy = nx - cx, ny - cy
+        if sc.snap_settings.ortho:                      # stay on the drag's axis
+            if v.y() == 0:
+                dy = 0.0
+            else:
+                dx = 0.0
+        return QPointF(dx, dy)
+
+    def _cells(self):
+        e = self._entity
+        return e.kind == "terminals" or (e.kind == "part" and not e.tag and (e.ident or e.names or e.first != 1))
+
+    def _paint_cells(self, painter, r, e, pn):
+        """Each terminal of a stack carries its own label (TB1.1 ...); the identifier sits above the stack."""
+        txt_col = QColor("#000000" if THEME["light"] else "#ffffff")
+        labels = pn.terminal_labels(e)
+        n = len(labels)
+        if pn.axis(e) == "x":
+            cw = r.width() / n
+            cells = [QRectF(r.left() + i * cw, r.top(), cw, r.height()) for i in range(n)]
+        else:
+            ch = r.height() / n
+            cells = [QRectF(r.left(), r.top() + i * ch, r.width(), ch) for i in range(n)]
+        for c, t in zip(cells, labels):
+            self._text(painter, t, c, 0.0, 0.5, txt_col, vertical=c.width() < c.height() * 0.6)
+        if e.ident and n > 1:
+            self._text(painter, f"{e.ident}  ({e.block})", QRectF(r.left(), r.bottom(), r.width(), 0.2), 0.0, 0.8, txt_col)
+
+    def paint(self, painter, option, widget=None):
+        from .. import panel as pn
+        e, r = self._entity, self.rect()
+        dark, light = PANEL_COLORS.get(e.kind, PANEL_COLORS["part"])
+        fill = QColor(light if THEME["light"] else dark)
+        fill.setAlpha(0 if e.kind == "plate" else 150)
+        painter.setPen(self.pen()); painter.setBrush(fill)
+        painter.drawRect(r)
+        if e.kind == "terminals" and e.qty > 1:               # the stacked blocks, side by side
+            n = e.qty
+            painter.setPen(QPen(self.pen().color(), 0, Qt.PenStyle.SolidLine))
+            for i in range(1, n):
+                if pn.axis(e) == "x":
+                    x = r.left() + r.width() * i / n
+                    painter.drawLine(QPointF(x, r.top()), QPointF(x, r.bottom()))
+                else:
+                    y = r.top() + r.height() * i / n
+                    painter.drawLine(QPointF(r.left(), y), QPointF(r.right(), y))
+        if e.kind in pn.MOUNTED and e.mount == "rail":       # the DIN rail centre line through the part
+            ox, oy = pn.centerline_offset(e)
+            pen = QPen(QColor("#ff8a1f"), 0, Qt.PenStyle.DashDotLine)
+            painter.setPen(pen)
+            if pn.axis(e) == "x":
+                painter.drawLine(QPointF(r.left(), e.cy + oy), QPointF(r.right(), e.cy + oy))
+            else:
+                painter.drawLine(QPointF(e.cx + ox, r.top()), QPointF(e.cx + ox, r.bottom()))
+        if e.kind in ("rail", "duct"):                         # the long centre line
+            painter.setPen(QPen(QColor("#555d66" if THEME["light"] else "#cfd6de"), 0, Qt.PenStyle.DotLine))
+            a, b = pn.end_points(e)
+            painter.drawLine(QPointF(*a), QPointF(*b))
+        main, sub = self._label()
+        if self._cells():
+            return self._paint_cells(painter, r, e, pn)
+        txt_col = QColor("#000000" if THEME["light"] else "#ffffff")
+        self._text(painter, main, r, 0.0 if not sub else 0.18, 0.5 if not sub else 0.32, txt_col)
+        if sub:
+            self._text(painter, sub, r, -0.18, 0.2, txt_col)
+        if e.locked and e.kind in ("rail", "duct"):
+            painter.setPen(QPen(txt_col, 0)); painter.setBrush(Qt.BrushStyle.NoBrush)
+            a, b = pn.end_points(e)
+            for q in (a, b):
+                painter.drawEllipse(QPointF(*q), 0.05, 0.05)
+
+    @staticmethod
+    def _text(painter, text, r, dy_frac, hfrac, color, vertical=False):
+        """Upright label centred in the box (dy_frac / hfrac: share of the box height), shrunk to fit."""
+        if not text:
+            return
+        font = QFont("Sans Serif"); font.setPixelSize(100)
+        path = QPainterPath(); path.addText(0, 0, font, text)
+        tb = path.boundingRect()
+        if tb.width() <= 0:
+            return
+        along, across = (r.height(), r.width()) if vertical else (r.width(), r.height())
+        k = min(across * hfrac / 72.0, along * 0.9 / tb.width(), 0.3 / 72.0)
+        k = max(k, 0.001)
+        t = QTransform()
+        t.translate(r.center().x(), r.center().y() + dy_frac * r.height())
+        if vertical:
+            t.rotate(90)
+        t.scale(k, -k)
+        t.translate(-tb.center().x(), -tb.center().y())
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen); painter.setBrush(color)
+        painter.drawPath(t.map(path))
+        painter.restore()
+
+
+
+class DimItem(_Common, QGraphicsPathItem):
+    """A horizontal / vertical dimension: extension lines, the dimension line with arrow heads and the
+    value (inches, or millimetres when the sheet's units are mm)."""
+    TEXT_H = 0.14                     # text height, inches
+    ARROW = 0.12
+
+    def __init__(self, e: m.Dim, layers, scene_ref):
+        super().__init__()
+        sc = scene_ref()
+        units = sc.sheet.dim_units if sc is not None else "in"
+        th = e.th or (sc.sheet.dim_th if sc is not None else self.TEXT_H)
+        arrow = self.ARROW * th / self.TEXT_H
+        from .. import panel as pn
+        a, b = pn.dim_line(e)
+        lines, arrows = QPainterPath(), QPainterPath()
+        gap, over = 0.05, 0.08
+        for p, q in (((e.x1, e.y1), a), ((e.x2, e.y2), b)):          # extension lines
+            dx, dy = q[0] - p[0], q[1] - p[1]
+            d = math.hypot(dx, dy)
+            if d > gap:
+                ux, uy = dx / d, dy / d
+                lines.moveTo(p[0] + ux * gap, p[1] + uy * gap)
+                lines.lineTo(q[0] + ux * over, q[1] + uy * over)
+        lines.moveTo(*a); lines.lineTo(*b)                            # dimension line
+        L = math.hypot(b[0] - a[0], b[1] - a[1])
+        if L > 1e-9:
+            ux, uy = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+            for tip, s in ((a, 1.0), (b, -1.0)):
+                bx, by = tip[0] + s * ux * arrow, tip[1] + s * uy * arrow
+                nx, ny = -uy * arrow * 0.25, ux * arrow * 0.25
+                arrows.moveTo(*tip); arrows.lineTo(bx + nx, by + ny); arrows.lineTo(bx - nx, by - ny); arrows.closeSubpath()
+        text = QPainterPath()
+        font = QFont("Sans Serif"); font.setPixelSize(100)
+        tp = QPainterPath(); tp.addText(0, 0, font, pn.dim_text(pn.dim_value(e), units))
+        tb = tp.boundingRect()
+        if tb.width() > 0:
+            k = th / 72.0
+            t = QTransform()
+            mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+            if e.orient == "h":
+                t.translate(mx, my + 0.05)
+                t.scale(k, -k); t.translate(-tb.center().x(), 0)
+            else:                                        # vertical: reads bottom to top, left of the line
+                t.translate(mx - 0.05, my)
+                t.rotate(90)
+                t.scale(k, -k); t.translate(-tb.center().x(), 0)
+            text = t.map(tp)
+        self._lines, self._arrows, self._text = lines, arrows, text
+        whole = QPainterPath(lines); whole.addPath(arrows); whole.addPath(text)
+        self.setPath(whole)
+        self._setup(e, layers, scene_ref)
+
+    def shape(self):
+        s = QPainterPathStroker(); s.setWidth(HIT_WIDTH)
+        p = s.createStroke(self._lines)
+        p.addRect(self._text.boundingRect())
+        return p
+
+    def boundingRect(self):
+        return self.path().boundingRect().adjusted(-0.1, -0.1, 0.1, 0.1)
+
+    def paint(self, painter, option, widget=None):
+        pen = self.pen()
+        painter.setPen(pen)
+        painter.drawPath(self._lines)
+        painter.setBrush(pen.color()); painter.drawPath(self._arrows)
+        painter.setPen(Qt.PenStyle.NoPen); painter.drawPath(self._text)
+
 
 
 class CircleItem(_Common, QGraphicsEllipseItem):
@@ -348,8 +575,11 @@ class GroupItem(QGraphicsItemGroup):
         elif change == QGraphicsItem.GraphicsItemChange.ItemPositionChange:
             sc = self._scene_ref()
             if sc is not None:
-                return _drag_pos(sc.snap_settings, value)
+                return self._snap_move(sc, _drag_pos(sc.snap_settings, value))
         return super().itemChange(change, value)
+
+    def _snap_move(self, sc, v):
+        return v
 
     def shape(self):                       # outline only, not the empty interior
         path = QPainterPath()
@@ -414,6 +644,8 @@ def build_item(e, layers, scene_ref):
     if isinstance(e, m.SlotMark): return SlotItem(e, layers, scene_ref)
     if isinstance(e, m.Group): return GroupItem(e, layers, scene_ref)
     if isinstance(e, m.Line): return LineItem(e, layers, scene_ref)
+    if isinstance(e, m.PanelObj): return PanelItem(e, layers, scene_ref)
+    if isinstance(e, m.Dim): return DimItem(e, layers, scene_ref)
     if isinstance(e, m.Rect): return RectItem(e, layers, scene_ref)
     if isinstance(e, m.Circle): return CircleItem(e, layers, scene_ref)
     if isinstance(e, m.Arc): return ArcItem(e, layers, scene_ref)

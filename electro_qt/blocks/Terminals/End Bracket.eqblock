@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="End Bracket" description="" part_number="DN-EB35" tag_prefix="EB" hyperlink="" manufacturer="Automation Direct" increment="0" connector="0" exclude_bom="0" fp_w="0.35" fp_h="2.28" fp_d="1.71" mount="rail" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="Terminals" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="-0.25" y1="-1.25" x2="0.1" y2="-1.25" id="12c5822f-6fb0-47ef-8573-973314205bfc" layer="0" />
+    <line x1="0.1" y1="-1.25" x2="0.1" y2="1.03" id="a0c4913a-69ee-44f8-a161-c582df464369" layer="0" />
+    <line x1="0.1" y1="1.03" x2="-0.25" y2="1.03" id="8a834bed-114e-4dba-8f24-27f6d807bac4" layer="0" />
+    <line x1="-0.25" y1="1.03" x2="-0.25" y2="-1.25" id="19bda5c8-91f4-40fd-852d-93a56a15f6af" layer="0" />
+    <circle cx="-0.07499999999999929" cy="-0.10999999999999943" r="0.10868719337677074" id="f0ad006f-a550-470c-b073-e5cd60105860" filled="0" layer="0" />
+    <line x1="-0.25" y1="0.75" x2="0.1" y2="0.75" id="579c2de2-b426-4c46-ae65-4139140ea07a" layer="0" />
+    <line x1="-0.25" y1="0.5" x2="0.1" y2="0.5" id="87f9b31f-f953-4667-8f18-82cb1289ae54" layer="0" />
+    <line x1="-0.25" y1="-1.0" x2="0.1" y2="-1.0" id="6268eaa7-95fb-4051-9309-3e2f156d55b5" layer="0" />
+    <line x1="-0.25" y1="-0.75" x2="0.1" y2="-0.75" id="ad75cf1f-6a8f-45d2-bd14-26f0f2badfa8" layer="0" />
+  </entities>
+</block>

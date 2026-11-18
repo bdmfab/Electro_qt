@@ -1170,3 +1170,270 @@ def test_unnumbered_wire_takes_number_from_its_to():
     s1.entities += [ln, to]
     rep = nb.update(p)
     assert [n.value for _, n in rep.changes[1]] == ["03000"] and not rep.unreached
+
+
+# ------------------------------------------------------------------ panel layout
+def _panel_project():
+    from electro import blocks as bk
+    p = m.Project("pl")
+    sch = p.add_sheet(m.Sheet(1))
+    b = bk.make_block("MCB", [m.Line(0, 0, 1, 0, m.Style("0"))], (0, 0), ("tag",), "right")
+    b.fp_w, b.fp_h, b.fp_d, b.mount, b.rail_cl = 0.7, 3.5, 2.8, "rail", 0.0
+    p.blocks["MCB"] = b
+    for t in ("QF1", "QF2"):
+        r = m.BlockRef("MCB", 1, 1); r.tag = t
+        sch.entities.append(r)
+    pan = m.Sheet(2, "Panel", row_pitch=1.0, grid_divisions=3, width=28, height=34, zone0_y=2.0)
+    pan.panel = True
+    p.add_sheet(pan)
+    return p, pan
+
+
+def test_panel_geometry_and_rotation():
+    from electro import panel as pn, geometry as g
+    d = m.PanelObj("duct", 5, 5, 4, 1.5, depth=3)
+    assert pn.box(d) == (3, 4.25, 7, 5.75) and pn.axis(d) == "x"
+    g.rotate_entity(d, (5, 5), 90)
+    assert pn.axis(d) == "y" and pn.box(d) == (4.25, 3, 5.75, 7)
+    g.translate(d, 1, 1)
+    assert (d.cx, d.cy) == (6, 6)
+    p0, p1 = pn.end_points(d)
+    assert p0 == (6, 4) and p1 == (6, 8)
+
+
+def test_panel_set_end_keeps_other_end():
+    from electro import panel as pn
+    r = m.PanelObj("rail", 5, 5, 1, 1.378)               # inserted 1 in long: 4.5 .. 5.5
+    pn.set_end(r, 1, (9, 5))
+    assert pn.end_points(r) == ((4.5, 5), (9, 5)) and abs(r.w - 4.5) < 1e-9
+    pn.set_end(r, 0, (12, 5))                              # dragged past the other end: the ends swap, no flip-over
+    assert pn.end_points(r) == ((9, 5), (12, 5))
+
+
+def test_panel_rail_snap_and_alignment():
+    from electro import panel as pn, blocks as bk
+    p, pan = _panel_project()
+    rail = m.PanelObj("rail", 10, 10, 8, 1.378)
+    other = m.PanelObj("part", 8, 10, 0.7, 3.5, mount="rail", block="MCB", tag="QF1")
+    part = pn.footprint_part(p.blocks["MCB"], "QF2")
+    cx, cy, rot, r = pn.rail_snap([rail, other], part, 9.2, 11.0)
+    assert r is rail and rot == 0 and abs(cy - 10) < 1e-9 and 6 <= cx <= 14
+    part.cl = 0.5                                          # rail line 0.5 above the part's centre
+    cx, cy, rot, r = pn.rail_snap([rail], part, 9.2, 11.0)
+    assert abs(cy - 9.5) < 1e-9
+    sx, sy, guides = pn.snap_box([other], 8.7 + 0.02, 10.04, 0.7, 3.5, 0.1)   # right beside it: edges line up
+    assert abs(sx - 8.7) < 1e-9 and abs(sy - 10) < 1e-9 and guides
+    v, g = pn.snap_line([other], 0, 8.0 + 0.7 / 2 + 0.25 + 0.04, 0.1, gap=0.25)  # a 0.25 gap from its right side
+    assert abs(v - (8.35 + 0.25)) < 1e-9
+
+
+def test_panel_unplaced_parts_and_checks(tmp_path):
+    from electro import panel as pn, xmlio
+    p, pan = _panel_project()
+    assert pn.unplaced_parts(p) == [("QF1", "MCB"), ("QF2", "MCB")]
+    plate = m.PanelObj("plate", 14, 17, 24, 30)
+    rail = m.PanelObj("rail", 14, 17, 10, 1.378)
+    a = pn.footprint_part(p.blocks["MCB"], "QF1", 10.0, 17.0)
+    b = pn.footprint_part(p.blocks["MCB"], "QF2", 10.3, 17.0)               # overlaps QF1
+    pan.entities += [plate, rail, a, b]
+    assert pn.unplaced_parts(p) == []
+    probs = pn.problems(pan)
+    assert any("QF1 overlaps QF2" in s for s in probs)
+    b.cx = 11.0
+    assert pn.problems(pan) == []
+    b.cx = 27.0                                                              # off the rail and off the plate
+    probs = pn.problems(pan)
+    assert any("off the back plate" in s for s in probs) and any("not on a DIN rail" in s for s in probs)
+    p.blocks["MCB"].exclude_bom = 1
+    assert pn.needed_parts(p) == []
+    p.blocks["MCB"].exclude_bom = 0
+    path = tmp_path / "p.eqt"
+    xmlio.save_project(p, str(path))
+    q = xmlio.load_project(str(path))
+    qs = q.sheets[2]
+    assert qs.panel and [o.kind for o in qs.entities] == ["plate", "rail", "part", "part"]
+    assert qs.entities[2].tag == "QF1" and qs.entities[2].mount == "rail" and qs.entities[2].depth == 2.8
+    assert (q.blocks["MCB"].fp_w, q.blocks["MCB"].fp_h, q.blocks["MCB"].mount) == (0.7, 3.5, "rail")
+
+
+def test_panel_dxf_export_outline():
+    from unittest import mock
+    from electro import dxfexport
+    o = m.PanelObj("duct", 5, 5, 4, 1.5, depth=3)
+    ex = dxfexport.Exporter.__new__(dxfexport.Exporter)
+    ex.attribs = lambda st: {"layer": "Panel duct"}
+    ex.linetype = lambda n: "DASHED"
+    lay = mock.MagicMock()
+    ex.add_entity(lay, o)
+    lay.add_lwpolyline.assert_called_once()
+    assert lay.add_lwpolyline.call_args[0][0][0] == (3, 4.25)
+    lay.add_line.assert_called_once(); lay.add_text.assert_called_once()
+
+
+def test_terminal_stack_bom_ungroup_and_dims():
+    from electro import panel as pn, reports, geometry as g, xmlio, blocks as bk
+    p, pan = _panel_project()
+    tb = bk.make_block("TB", [m.Line(0, 0, 0.2, 0, m.Style("0"))], (0, 0), (), "right", part_number="T-1")
+    tb.fp_w, tb.fp_h, tb.fp_d, tb.mount = 0.2, 1.9, 1.5, "rail"
+    p.blocks["TB"] = tb
+    stack = pn.footprint_terminals(tb, 5, 10.0, 10.0)
+    assert stack.kind == "terminals" and stack.qty == 5 and abs(stack.w - 1.0) < 1e-9
+    pan.entities.append(stack)
+    rows = reports.bom(p)[1]
+    tbrow = [r for r in rows if r[5] == "TB"][0]
+    assert tbrow[1] == 5 and tbrow[2] == "T-1"                    # on the layout only, in the BOM, qty 5
+    stack.xbom = True
+    assert not [r for r in reports.bom(p)[1] if r[5] == "TB"]     # the option to exclude
+    stack.xbom = False
+    kids = pn.ungroup(stack)
+    assert len(kids) == 5 and all(k.kind == "part" and abs(k.w - 0.2) < 1e-9 and not k.tag for k in kids)
+    assert abs(kids[0].cx - 9.6) < 1e-9 and abs(kids[4].cx - 10.4) < 1e-9
+    stack.rot = 90                                                 # a turned stack ungroups along the turned axis
+    k2 = pn.ungroup(stack)
+    assert abs(k2[0].cy - 9.6) < 1e-9 and abs(k2[4].cy - 10.4) < 1e-9 and abs(k2[0].cx - 10.0) < 1e-9
+    pan.entities.remove(stack); pan.entities += kids
+    assert [r for r in reports.bom(p)[1] if r[5] == "TB"][0][1] == 5
+    d = m.Dim(2, 2, 7, 4, "h", 5.5)
+    assert pn.dim_value(d) == 5 and pn.dim_auto_orient((0, 0), (1, 3)) == "v"
+    assert pn.dim_text(5, "in") == '5.000"' and pn.dim_text(1, "mm") == "25.4"
+    pan.entities.append(d)
+    g.rotate_entity(d, (0, 0), 90)
+    assert d.orient == "v" and pn.dim_value(d) == 5
+    import tempfile, os
+    path = os.path.join(tempfile.mkdtemp(), "d.eqt")
+    pan.dim_units = "mm"
+    xmlio.save_project(p, path)
+    q = xmlio.load_project(path)
+    qd = [e for e in q.sheets[2].entities if isinstance(e, m.Dim)][0]
+    assert qd.orient == "v" and q.sheets[2].dim_units == "mm"
+    assert not q.blocks["TB"].exclude_bom and q.blocks["TB"].mount == "rail"
+
+
+def test_terminal_labels_and_ungroup():
+    from electro import panel as pn, xmlio
+    o = m.PanelObj("terminals", 5, 5, 1.0, 1.9, qty=4, block="TB", ident="TB1")
+    assert pn.terminal_labels(o) == ["TB1.1", "TB1.2", "TB1.3", "TB1.4"]
+    pn.set_terminal_labels(o, "TB2", 3, ["TB2.3", "L+", "TB2.5", "TB2.6"])     # one custom label
+    assert o.ident == "TB2" and o.first == 3 and o.names == "|L+||"
+    assert pn.terminal_labels(o) == ["TB2.3", "L+", "TB2.5", "TB2.6"]
+    kids = pn.ungroup(o)
+    assert [pn.terminal_labels(k)[0] for k in kids] == ["TB2.3", "L+", "TB2.5", "TB2.6"]
+    p = m.Project("t"); sh = m.Sheet(1, "Panel"); sh.panel = True; sh.entities.append(o); p.add_sheet(sh)
+    assert pn.next_ident(p) == "TB1" if False else pn.next_ident(p, "TB") == "TB1"
+    o.ident = "TB1"
+    assert pn.next_ident(p) == "TB2"
+    import tempfile, os
+    f = os.path.join(tempfile.mkdtemp(), "t.eqt"); save_project(p, f)
+    q = load_project(f)
+    o2 = [e for e in q.sheets[1].entities if isinstance(e, m.PanelObj)][0]
+    assert (o2.ident, o2.first, o2.names) == ("TB1", 3, "|L+||")
+
+
+def test_dim_text_height_roundtrip_and_dxf(tmp_path):
+    from electro import dxfexport
+    p = m.Project("t"); sh = m.Sheet(1, "Panel"); sh.panel = True; sh.dim_th = 0.2
+    d = m.Dim(0, 0, 4, 0, "h", 1.0, th=0.3); sh.entities.append(d); p.add_sheet(sh)
+    f = str(tmp_path / "t.eqt"); save_project(p, f)
+    q = load_project(f)
+    assert abs(q.sheets[1].dim_th - 0.2) < 1e-9
+    assert abs([e for e in q.sheets[1].entities if isinstance(e, m.Dim)][0].th - 0.3) < 1e-9
+
+
+def test_profiles_file(tmp_path, monkeypatch):
+    from electro import profiles as pf, panel as pn
+    folder = str(tmp_path)
+    assert pf.save("", "", "x", 1, 1, 1, folder=folder) is None                  # nothing to key it by
+    path = pf.save("Siemens", "3RT2015", "https://x.test/a%20b", 0.9, 3.1, 3.5, "rail", 0.25, folder=folder)
+    assert os.path.basename(path) == ".electro_profiles.ini"
+    txt = open(path).read()
+    assert "[3RT2015]" in txt and "part_number = 3RT2015" in txt and "hyperlink = https://x.test/a%20b" in txt
+    profs = pf.load(folder)
+    name, pr = pf.find(profs, "siemens", " 3rt2015 ")
+    assert name == "3RT2015" and pr["width"] == 0.9 and pr["rail_cl"] == 0.25
+    assert pf.find(profs, "", "", "https://x.test/a%20b")[0] == name              # by hyperlink
+    assert pf.find(profs, "ABB", "zzz")[0] is None
+    pf.save("Siemens", "3RT2015", "", 1.0, 3.0, 3.0, "plate", folder=folder)      # overwrite, same section
+    assert len(pf.load(folder)) == 1 and pf.load(folder)[name]["mounting"] == "plate"
+    with open(path, "a") as f:                                                     # a hand-written mm profile
+        f.write("\n[ABB mm]\nmanufacturer = ABB\npart_number = A9\nwidth = 25.4\nheight = 50.8\ndepth = 0\nunits = mm\n")
+    assert abs(pf.load(folder)["ABB mm"]["height"] - 2.0) < 1e-9
+    # layout uses the profile for a generic block
+    pf.set_folder(folder)
+    p = m.Project("t")
+    blk = m.BlockDef("breaker", tag_prefix="CB", mount="rail"); p.blocks["breaker"] = blk
+    s = p.add_sheet(m.Sheet(1, "One"))
+    s.entities.append(m.BlockRef("breaker", 1, 1, 0, True, "CB1", {"manufacturer": "ABB", "part_number": "A9"}))
+    eff = pn.effective_block(p, blk, "CB1")
+    assert abs(eff.fp_w - 1.0) < 1e-9 and abs(eff.fp_h - 2.0) < 1e-9 and eff.mount == "rail"
+    assert pn.footprint_part(eff, "CB1") is not None and pn.footprint_part(blk, "CB1") is None
+    pf.set_folder("")
+
+
+def test_locked_rail_is_pinned():
+    from electro import panel as pn
+    EditorScene = type('E', (), {'is_pinned': staticmethod(pn.pinned)})
+    r = m.PanelObj("rail", 1, 1, 5, 1.378, locked=True)
+    assert EditorScene.is_pinned(r)
+    r.locked = False
+    assert not EditorScene.is_pinned(r)
+    assert not EditorScene.is_pinned(m.PanelObj("part", 1, 1, 1, 1, locked=True))
+
+
+def test_profile_per_placed_part_and_type(tmp_path):
+    from electro import profiles as pf, panel as pn
+    pf.set_folder(str(tmp_path))
+    pf.save("A", "K1", "", 1.0, 3.0, 3.0, block="contactor")
+    pf.save("B", "K2", "", 2.0, 4.0, 3.0, block="contactor")
+    p = m.Project("t")
+    blk = m.BlockDef("contactor", tag_prefix="KM", mount="rail"); p.blocks["contactor"] = blk
+    field = m.BlockDef("limit", tag_prefix="LS"); p.blocks["limit"] = field        # Not on back plate
+    s = p.add_sheet(m.Sheet(1, "One"))
+    s.entities += [m.BlockRef("contactor", 1, 1, 0, True, "KM1", {"profile": "K1"}),
+                   m.BlockRef("contactor", 2, 1, 0, True, "KM2", {"profile": "K2"}),
+                   m.BlockRef("contactor", 3, 1, 0, True, "KM3", {"manufacturer": "B", "part_number": "K2"}),
+                   m.BlockRef("limit", 4, 1, 0, True, "LS1", {})]
+    assert [pn.effective_block(p, blk, t).fp_w for t in ("KM1", "KM2", "KM3")] == [1.0, 2.0, 2.0]
+    assert pn.needed_parts(p) == [("KM1", "contactor"), ("KM2", "contactor"), ("KM3", "contactor")]   # LS1 is off the plate
+    assert pn.effective_block(p, field, "LS1").mount == ""
+    path, name = pf.save("A", "K1", "", 1.5, 3.0, 3.0, section="K1", return_name=True)
+    assert name == "K1" and pn.effective_block(p, blk, "KM1").fp_w == 1.5
+    pf.set_folder("")
+
+
+def test_profiles_belong_to_a_block(tmp_path):
+    from electro import profiles as pf
+    f = str(tmp_path)
+    pf.save("Automation Direct", "FU-DN", "", 0.39, 3.23, 2.0, block="Fuse", folder=f)
+    pf.save("Phoenix", "1234", "", 0.5, 3.0, 2.0, block="Fuse", folder=f)
+    pf.save("Banner", "PN", "", 1.4, 4.1, 2.9, block="2p Breaker", folder=f)
+    profs = pf.load(f)
+    assert sorted(pf.for_block(profs, "Fuse")) == ["1234", "FU-DN"]
+    assert sorted(pf.for_block(profs, "2p Breaker")) == ["PN"]
+    assert pf.find(profs, "", "PN", block="Fuse")[0] is None                    # another block's profile is not offered
+    assert pf.find(profs, "", "FU-DN", block="Fuse")[0] == "FU-DN"
+    assert pf.find(profs, "", "", "x", block="Fuse")[0] is None
+    # same part number under another block gets its own section
+    pf.save("Automation Direct", "FU-DN", "", 0.4, 3.0, 2.0, block="Fuse2", folder=f)
+    assert "FU-DN (2)" in pf.load(f) and pf.load(f)["FU-DN (2)"]["block"] == "Fuse2"
+    # old profiles without a block are given to the block whose parts use them
+    p = m.Project("t"); s = p.add_sheet(m.Sheet(1, "One"))
+    s.entities.append(m.BlockRef("Fuse", 1, 1, 0, True, "FU1", {"profile": "1234"}))
+    import configparser
+    cp = configparser.ConfigParser(); cp.read(f + "/.electro_profiles.ini"); del cp["1234"]["block"]
+    cp.write(open(f + "/.electro_profiles.ini", "w"))
+    assert pf.load(f)["1234"]["block"] == ""
+    pf.claim_legacy(p, f)
+    assert pf.load(f)["1234"]["block"] == "Fuse"
+
+
+def test_profiles_adopted_into_library(tmp_path):
+    from electro import profiles as pf
+    proj, lib = tmp_path / "proj", tmp_path / "lib"
+    proj.mkdir(); lib.mkdir()
+    pf.save("A", "K1", "", 1, 1, 1, block="B", folder=str(proj))
+    pf.set_folder(str(lib))
+    assert pf.load() == {} and pf.adopt(str(proj)) is True
+    assert "K1" in pf.load() and pf.adopt(str(proj)) is False
+    pf.save("A", "K2", "", 1, 1, 1, block="B")                 # new profiles go to the library
+    assert "K2" in pf.load(str(lib)) and "K2" not in pf.load(str(proj))
+    pf.set_folder("")

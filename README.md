@@ -242,6 +242,32 @@ A placed block now counts with its real extent (graphics + slots, rotated / mirr
 ## 0.18.1
 - Goto connectors: when a wire has two free ends, the **From** now goes on the **left** end and the **To** on the **right** end (it was the other way round). A wire with only one free end (the other end on a part's slot) still uses that end whichever side it is on, so no slot is needed to steer it.
 
+## 0.19.0 - Big blocks, label placement, Move sheet
+- **Selecting big blocks:** a placed block larger than 1.5 in (either way) is picked by clicking its lines, slots or text, not its empty inside, so a PLC across both columns no longer hides what is under it (a box dragged over the whole block still selects it). Smaller parts stay clickable anywhere on the body.
+- **Block label corners:** Make block / block properties > Stacked label > Position has new choices **Inside, top left / top right / bottom left / bottom right** (the text stack sits in that corner of the block instead of the middle of its box).
+- **Drag the label of one placed part:** select a part and a purple grip sits on its label; drag it anywhere (undoable). Right-click > **Reset label position** puts it back. The DXF export follows the dragged position.
+- **Sheet > Move sheet...:** give the current sheet another position (2 -> 3: the old 3 becomes 2). Tabs, "PAGE n OF m" and goto targets follow. Then press **Update wire numbers**: wire numbers are recalculated for the new pages, and **goto connectors are renamed to the new numbers** (07-1 becomes 09-1 when their wires became 09; the -k suffix is kept, bumped if the name is taken).
+
+## 0.19.1 - Goto ends, typed numbers
+- Goto connectors: From defaults to the RIGHT end of a wire, To to the LEFT end. If a part (slot) sits on the default end, the other end is used.
+- Update wire numbers now says when wires have typed (override) numbers - they do not follow a moved sheet - and offers to switch them back to automatic and update again.
+
+## 0.19.2 - From is the number source
+- Wires tied by a goto now take the number of the wire that carries the **From** (source); the To wires (destination) follow it, wherever they are. Before, the lowest sheet won, so a From on sheet 3 showed sheet 1's number. Typed/locked numbers still win. Connector names (NUMBER-k) follow after Update wire numbers.
+
+## 0.19.3 - One pass, no gaps
+- A To wire takes its From's number inside the same Update; it no longer uses up a count in global-counter schemes, so no gap is left on page 1.
+
+## 0.19.4 - Exclude from BOM, rotated labels
+- Block properties: **Exclude from BOM** checkbox (the part is left out of the bill of materials; saved with the block).
+- A block's label text (From cross-reference, etc.) flips to the outside when the block is turned round (180 degrees), instead of running back over the block.
+
+## 0.19.5 - Goto never doubles a connector
+- Applying a goto no longer adds a From (or To) to a wire that already carries one. The existing connector is kept and the new end joins its name, e.g. a wire with From GND gets no GND-2; the other wire gets a To called GND. If the two wires already carry different names nothing is added and you are told.
+
+## 0.19.6 - Number from the To
+- A wire no marked wire reaches, but that carries a goto connector named NUMBER-k, now takes NUMBER from the connector's name when wire numbers are updated (no "not reached" warning).
+
 ## 0.19.7 - Part properties, grid origin, ortho, PDF centring, speed
 - **Exclude from BOM** is now a checkbox in Part properties (per placed part); it is no longer in the block dialog.
 - Editing a block: the block origin now sits on a major grid crossing (5.95, 5.95; the grid passes through it), so pasted geometry lands on the grid.
@@ -249,28 +275,66 @@ A placed block now counts with its real extent (graphics + slots, rotated / mirr
 - PDF export: the frame (border + title block) is centred on the page, 0.25" all round.
 - Selecting many lines is lighter: line hit shapes are cached, grips are calculated once per selection (not on every mouse move / repaint) and the Properties panel refreshes once after the selection settles.
 
-## 0.19.6 - Number from the To
-- A wire no marked wire reaches, but that carries a goto connector named NUMBER-k, now takes NUMBER from the connector's name when wire numbers are updated (no "not reached" warning).
+## 0.20.0 - Panel layout (2D, to scale)
+- **Panel > New panel layout...** makes a panel sheet: type the back plate size (inches or mm) or take it from a block that has a footprint.
+- **Panel > Insert DIN rail / wire duct...**: pick a size, then click to drop a 1 in long piece. **Space** turns it (90 degrees). Select it and drag the yellow end handles to the length you want (the length shows while you drag). **L** (or Panel > Lock / unlock) locks a rail / duct so its ends cannot be dragged by accident. Panel > Size of selected... types exact length / width / depth.
+- Snapping while placing or dragging an end: edges and centres of the other objects (a guide line shows), plus an optional gap (Panel > Spacing between objects...). Parts that mount on a DIN rail snap their rail centre line onto the rail and turn to follow it (Space then flips them 180 degrees).
+- **Library > Edit data** has a panel footprint: width, height, depth, mounting (DIN rail / back plate) and where the DIN rail centre line crosses the part.
+- **Panel parts** list (View menu): the schematic's parts (non-connector, not excluded from the BOM) not yet on a panel; double-click one to place it. Parts without a footprint are greyed.
+- Panel > Check layout: overlaps, parts off the plate, rail parts not on a rail. Panel sheets print to PDF and export to DXF at 1:1 (inches). Objects keep a profile + length + depth, ready to extrude to 3D later.
 
-## 0.19.5 - Goto never doubles a connector
-- Applying a goto no longer adds a From (or To) to a wire that already carries one. The existing connector is kept and the new end joins its name, e.g. a wire with From GND gets no GND-2; the other wire gets a To called GND. If the two wires already carry different names nothing is added and you are told.
+## 0.20.1 - Panel toolbar, terminal blocks, dimensions
+- README versions are now in order (oldest first).
+- Lock / unlock a DIN rail or duct is on the right-click menu (and the L key), no longer in the Panel menu.
+- A **Panel toolbar** appears to the right of the tools whenever a panel layout sheet is open: new layout, rail, duct, part, terminal blocks, ungroup, dimension, size, spacing, dimension units, check.
+- Block data: **Mounted to backplate** checkbox; the footprint, units, mounting and rail centre line only show when it is ticked. Mounting is DIN rail (default) or back plate; there is no "none".
+- **Terminal blocks** exist only on the layout: define the block like any other (Mounted to backplate, size), then Panel > Add terminal blocks... picks the block and a quantity; the stack goes down as one group, Space turns the whole group, and right-click > Ungroup terminal blocks splits it into separate blocks. They are added to the BOM (grouped by part number; blocks you excluded are left out); right-click > Exclude from BOM leaves a stack out. Panel > Size of selected changes the quantity.
+- **Dimensions** (Panel > Dimension): pick two points, then click where the line goes. Horizontal or vertical only; the direction follows the two points and Space switches it. Drag the yellow / blue handles to move the line or a point. Shown in inches or mm (Panel > Dimension units); they print to PDF and export to DXF.
 
-## 0.19.4 - Exclude from BOM, rotated labels
-- Block properties: **Exclude from BOM** checkbox (the part is left out of the bill of materials; saved with the block).
-- A block's label text (From cross-reference, etc.) flips to the outside when the block is turned round (180 degrees), instead of running back over the block.
+## 0.20.2 - Lock, dimension text, footprint profiles, terminal labels
+- **Lock** now also stops a DIN rail / duct from being moved (dragging, align, rotate), not only resized. Unlock it to move it.
+- **Dimension text height**: double-click a dimension, or right-click > Dimension text height..., to set it for the selected dimensions (arrows scale with it). With nothing selected, Panel > Dimension text height... sets every dimension on the sheet. Shown in the sheet's dimension units; exported to DXF at that height.
+- **Footprint profiles**: the schematic keeps one generic block (breaker, contactor, fuse holder...) while the layout differs per part. Part properties (double-click a part) now has Hyperlink and **Panel footprint (to scale)**: width, height, depth, mounting, rail centre line. Paste the manufacturer, part number and/or hyperlink and the footprint fills in from the profile; change a value to overwrite it. On OK the profile is saved to a hidden, readable file, `.electro_profiles.ini`, in the project's folder (the current folder if the project is unsaved):
+  ```
+  [Siemens 3RT2015-1BB41]
+  manufacturer = Siemens
+  part_number = 3RT2015-1BB41
+  hyperlink = https://...
+  width = 0.9
+  height = 3.1
+  depth = 3.5
+  mounting = rail
+  rail_cl = 0.0
+  units = in
+  ```
+  Parts are matched by manufacturer + part number (or by hyperlink). You can edit the file by hand; `units = mm` is understood. The Panel parts list and placing a part use the profile first, then a footprint saved on the part (no manufacturer/part number), then the block's own footprint.
+- Library folders now start **closed**.
+- **Terminal labels**: terminal blocks carry an identifier (default TB1, TB2...) and each terminal is labelled TB1.1, TB1.2... (editable first number). Panel > Add terminal blocks asks for the identifier; double-click a stack (or right-click > Terminal labels...) to change the identifier, renumber, or type any label. Ungrouped blocks keep their labels. Labels show in each cell and in the DXF.
 
-## 0.19.3 - One pass, no gaps
-- A To wire takes its From's number inside the same Update; it no longer uses up a count in global-counter schemes, so no gap is left on page 1.
+## 0.20.3 - One Part properties dialog, profile per part
+- **Part properties** replaces both Block data and the old part dialog. It opens from Make block, the library (double-click / Edit) and a placed part (double-click). The **Type** decides which fields show; the type belongs to the block (all copies):
+  - *On back plate*: everything, including Profile and the to-scale footprint.
+  - *Not on back plate*: everything except Profile / footprint (still in the BOM; not on the layout, not in the Panel parts list).
+  - *Off-page connector*: name, folder, tag prefix, tag, cross-reference.
+  - *Exclude from BOM*: name, folder, wire numbering, description, tag. Left out of the BOM and the layout.
+- The "show" checkboxes sit next to Description, Part number, Tag and Cross-reference. Fields marked "(all copies)" change the block; the rest belong to that placed part. **Edit geometry** (bottom) saves and opens the block's drawing.
+- **Profile per placed part**: pick a saved profile from the drop-down, or paste a manufacturer / part number / hyperlink; a match selects the profile and fills the footprint. A part number that is not in the list is a new profile, saved automatically on OK. Changing a value on an existing profile updates that profile (every part using it follows). Four contactors of one block can each have their own profile. Select several parts, right-click > Apply footprint profile... to give them all the same one.
+- The footprint list (Panel parts, placing) uses the part's profile, then a footprint saved on the part, then the block's own.
+- **Add terminal blocks** lists the blocks in the library folder **Terminals**; the identifier starts from the block's Tag prefix and counts up (TB1, TB2...).
+- The Panel parts list refreshes when Part properties closes (the "no footprint" mark clears).
+- "Exclude from BOM" per part (0.19.7) is now the block's Type; files that already have it on a part still honour it.
 
-## 0.19.2 - From is the number source
-- Wires tied by a goto now take the number of the wire that carries the **From** (source); the To wires (destination) follow it, wherever they are. Before, the lowest sheet won, so a From on sheet 3 showed sheet 1's number. Typed/locked numbers still win. Connector names (NUMBER-k) follow after Update wire numbers.
+## 0.20.4
+- Part properties: typing a different manufacturer / part number on a part that has a profile selected now creates a new profile instead of renaming the selected one.
 
-## 0.19.1 - Goto ends, typed numbers
-- Goto connectors: From defaults to the RIGHT end of a wire, To to the LEFT end. If a part (slot) sits on the default end, the other end is used.
-- Update wire numbers now says when wires have typed (override) numbers - they do not follow a moved sheet - and offers to switch them back to automatic and update again.
+## 0.20.5 - Profiles per block, edge snapping
+- **Profiles belong to a block.** Each profile in `.electro_profiles.ini` has a `block = Fuse` line; Part properties (and Apply footprint profile...) list only the profiles of the block being edited, e.g. Fuse: FU-DN, 1234; 2p Breaker: GMCBU-2B. A new profile is named after its part number (a duplicate gets "(2)"); edit the ini to rename. Profiles saved by 0.20.2-0.20.4 are given to the block of the parts that use them the first time Part properties opens.
+- Pasting a part number only matches that block's profiles; a hyperlink alone matches only when no part number is given.
+- **Snapping on the panel layout**: dragging parts / rails / ducts snaps the selection's edges and centres to the other objects, or the panel gap away from their sides (as when placing). Ortho keeps the drag on its axis.
+- Add terminal blocks: quantity defaults to 1.
 
-## 0.19.0 - Big blocks, label placement, Move sheet
-- **Selecting big blocks:** a placed block larger than 1.5 in (either way) is picked by clicking its lines, slots or text, not its empty inside, so a PLC across both columns no longer hides what is under it (a box dragged over the whole block still selects it). Smaller parts stay clickable anywhere on the body.
-- **Block label corners:** Make block / block properties > Stacked label > Position has new choices **Inside, top left / top right / bottom left / bottom right** (the text stack sits in that corner of the block instead of the middle of its box).
-- **Drag the label of one placed part:** select a part and a purple grip sits on its label; drag it anywhere (undoable). Right-click > **Reset label position** puts it back. The DXF export follows the dragged position.
-- **Sheet > Move sheet...:** give the current sheet another position (2 -> 3: the old 3 becomes 2). Tabs, "PAGE n OF m" and goto targets follow. Then press **Update wire numbers**: wire numbers are recalculated for the new pages, and **goto connectors are renamed to the new numbers** (07-1 becomes 09-1 when their wires became 09; the -k suffix is kept, bumped if the name is taken).
+## 0.20.6
+- Part properties: choosing a profile (mouse, keyboard or wheel) always fills manufacturer, part number, hyperlink and footprint; moving focus out of a field no longer resets the selected profile unless the text was changed.
+
+## 0.20.7
+- The footprint profiles file `.electro_profiles.ini` now lives in the **block library folder** (with the blocks), not next to the project, so every project shares it. A file left next to a project by 0.20.2-0.20.6 is copied into the library the first time that project is opened, if the library has none yet; after that the library's file is the one used (merge old entries into it by hand if you had profiles in several project folders).

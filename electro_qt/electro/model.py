@@ -121,7 +121,47 @@ class Group:
     TAG = "group"
 
 
-ENTITY_TYPES = {c.TAG: c for c in (Line, Rect, Circle, Arc, Text, BlockRef, SlotMark, Group)}
+@dataclass
+class PanelObj:
+    """An object of a panel layout (to scale, front view): the back plate, a DIN rail, a wire duct or a
+    part's footprint. `w` runs along the object's own x axis (the length of a rail / duct), `h` across it;
+    `rot` (0 / 90 / 180 / 270) turns it on the sheet. Kept as a profile + length (+ `depth`) so it can be
+    extruded to 3D later."""
+    kind: str                     # plate | rail | duct | part | terminals
+    cx: float; cy: float          # centre on the sheet
+    w: float; h: float            # footprint in its own frame (inches)
+    rot: float = 0.0
+    depth: float = 0.0            # how far it stands off the plate (3D); duct depth, part depth
+    locked: bool = False          # rail / duct: ends cannot be dragged
+    block: str = ""               # part: the block it stands for
+    tag: str = ""                 # part: the schematic tag (KM1)
+    mount: str = ""               # part: rail | plate
+    cl: float = 0.0               # part: DIN rail centre line, offset from the centre across the part (own y)
+    qty: int = 1                  # terminals: how many blocks are stacked side by side (w = qty x one block's width)
+    xbom: bool = False            # layout-only parts (terminals): left out of the BOM
+    ident: str = ""               # terminal block identifier (TB1); its terminals are TB1.1, TB1.2 ...
+    first: int = 1                # number of the first terminal
+    names: str = ""               # custom terminal labels, "|" separated ("" = automatic), one per terminal
+    style: Style = field(default_factory=Style)
+    id: str = field(default_factory=new_id)
+    TAG = "panel"
+
+
+@dataclass
+class Dim:
+    """A horizontal or vertical dimension between two points (the layout is to scale, so it measures real
+    size). `pos` is where the dimension line sits: its y for a horizontal one, its x for a vertical one."""
+    x1: float; y1: float
+    x2: float; y2: float
+    orient: str = "h"             # h | v
+    pos: float = 0.0
+    th: float = 0.0               # text height, inches (0 = the sheet's default)
+    style: Style = field(default_factory=Style)
+    id: str = field(default_factory=new_id)
+    TAG = "dim"
+
+
+ENTITY_TYPES = {c.TAG: c for c in (Line, Rect, Circle, Arc, Text, BlockRef, SlotMark, Group, PanelObj, Dim)}
 
 
 # ---------------------------------------------------------------- blocks
@@ -145,6 +185,11 @@ class BlockDef:
     data: dict = field(default_factory=dict)      # extra BOM fields
     increment: int = 0                            # 0 none, 1 = +1
     exclude_bom: int = 0                          # 1 = left out of the bill of materials
+    fp_w: float = 0.0                             # panel footprint (inches): width along the rail / plate x,
+    fp_h: float = 0.0                             #   height across it,
+    fp_d: float = 0.0                             #   depth off the plate
+    mount: str = ""                               # rail | plate ("" = no footprint yet)
+    rail_cl: float = 0.0                          # DIN rail centre line, offset from the footprint centre (across)
     connector: int = 0                            # 1 = off-page connector: parts with the same tag are one wire
     prefix_rule: str = ""                         # e.g. "motor" -> L becomes T
     poles: int = 1
@@ -208,6 +253,9 @@ class Sheet:
     col_split_x: Optional[float] = None    # two-column sheets: x >= this is zones 25-49
     title_lines: list = field(default_factory=lambda: ["", "", "", ""])
     frame: list = field(default_factory=list)   # border, zone markers, title block (not user-editable objects)
+    dim_th: float = 0.14          # default dimension text height (inches)
+    dim_units: str = "in"         # panel layout dimensions are shown in: in | mm
+    panel: bool = False           # a panel layout sheet (to scale, no title block / zones)
     cover: bool = False           # the cover sheet: page 00, not numbered, no title block / zones
 
     def __post_init__(self):

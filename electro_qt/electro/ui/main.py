@@ -20,7 +20,7 @@ from .textdlg import fill_color_combo
 from .view import EditorView
 from .properties import PropertiesPanel
 from .library import LibraryPanel
-from .blockdlg import BlockDialog, CopyBlockDialog
+from .blockdlg import CopyBlockDialog
 from .. import blocks as bk
 from .. import numbering as nb
 from .commands import EditCmd
@@ -64,6 +64,10 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.props)
         self.lib = LibraryPanel(self)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.lib)
+        from .paneldlg import PartsPanel
+        self.parts = PartsPanel(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.parts)
+        self.parts.place.connect(self.on_place_panel_part)
         self.lib.place.connect(self.on_place_block)
         self.lib.edit.connect(self.on_edit_block)
         self.lib.edit_geometry.connect(self.on_edit_block_geometry)
@@ -158,7 +162,10 @@ class MainWindow(QMainWindow):
         sc.blocks_changed.connect(lambda sc=sc: self._blocks_changed(sc))
         sc.block_made.connect(self._block_made)
         sc.edit_block_requested.connect(self.on_edit_block_geometry)
+        sc.block_values_changed.connect(self._apply_block_values)
         sc.undo.indexChanged.connect(lambda _i: self._refresh_xrefs())
+        sc.undo.indexChanged.connect(lambda _i: self._refresh_parts())
+        sc.panel_placed.connect(self._refresh_parts)
         sc.apply_goto = self.apply_goto
         sc.scene_for_page = lambda pg: next((x for x in self._sheet_scenes() if x.sheet.page == pg), None)
         sc.folder_choices = list(self.store.folders)
@@ -175,6 +182,8 @@ class MainWindow(QMainWindow):
             return
         self.undo_group.setActiveStack(sc.undo)
         self.props.attach(sc)
+        self.panel_tb.setVisible(bool(sc.sheet.panel))
+        self._refresh_parts()
         self._sync(sc)
         self._follow_tool(sc, sc.tool.name)
         self.statusBar().showMessage(sc.tool.hint())
@@ -197,6 +206,9 @@ class MainWindow(QMainWindow):
         sc.update()
 
     def _title(self, *_):
+        from .. import profiles
+        profiles.set_folder(self.store.root)            # footprint profiles live in the block library folder
+        profiles.adopt(os.path.dirname(os.path.abspath(self.path)) if self.path else "")
         dirty = self._extra_dirty or any(not sc.undo.isClean() for sc in self._scenes())
         self.setWindowTitle(f"Electro_qt - {self.path or 'unsaved'}{' *' if dirty else ''}")
 
@@ -280,6 +292,26 @@ class MainWindow(QMainWindow):
         sm.addAction(self._act("Title block &image...", self.on_logo))
         sm.addAction(self._act("&Remove title block image", self.on_remove_logo))
 
+        pm = self.menuBar().addMenu("&Panel")
+        self._panel_acts = []                      # the same actions fill the Panel toolbar (shown on panel sheets)
+        for item in (("&New panel layout...", self.on_new_panel), None,
+                           ("Insert &DIN rail...", lambda: self.on_insert_run("rail")),
+                           ("Insert wire d&uct...", lambda: self.on_insert_run("duct")),
+                           ("Place a &part...", lambda: (self.parts.show(), self.parts.raise_())),
+                           ("Add &terminal blocks...", self.on_add_terminals),
+                           ("&Ungroup terminal blocks", self._on_scene(lambda s: s.ungroup_terminals())), None,
+                           ("Di&mension", self.on_dimension),
+                           ("&Size of selected...", self.on_panel_size),
+                           ("&Spacing between objects...", self.on_panel_gap),
+                           ("Dimension &units (in / mm)...", self.on_panel_units),
+                           ("Dimension &text height...", self._on_scene(lambda s: s.dim_text_height())),
+                           ("&Check layout", self.on_panel_check)):
+            if item is None:
+                pm.addSeparator(); self._panel_acts.append(None)
+            else:
+                act = self._act(*item)
+                pm.addAction(act); self._panel_acts.append(act)
+
         vm = self.menuBar().addMenu("&View")
         vm.addAction(self._act("Zoom &extents", lambda _=False: self.view.zoom_extents(), "Home"))
         vm.addAction(self._act("Grid &divisions...", self.on_grid_divisions))
@@ -294,6 +326,7 @@ class MainWindow(QMainWindow):
         lm.addAction(self._act("Use the &default library folder", self.on_default_library))
 
         vm.addAction(self.props.toggleViewAction())
+        vm.addAction(self.parts.toggleViewAction())
         vm.addAction(self.lib.toggleViewAction())
         bm = vm.addMenu("&Background")
         for label, col in (("Dark", DEFAULT_BG), ("Black", "#000000"), ("Gray", "#6b6f76"),
@@ -317,6 +350,14 @@ class MainWindow(QMainWindow):
                               and self.scene_.tool.name != n and self.scene_.request_tool(n))
             grp.addAction(a); tb.addAction(a); self.tool_actions[name] = a
         tb.addSeparator()
+        self.panel_tb = QToolBar("Panel"); self.panel_tb.setMovable(False)       # right of the tools, panel sheets only
+        self.addToolBar(self.panel_tb)
+        for act in self._panel_acts:
+            if act is None:
+                self.panel_tb.addSeparator()
+            else:
+                self.panel_tb.addAction(act)
+        self.panel_tb.setVisible(False)
         self.act_ortho = self._act("Ortho (F8)", lambda _on: self._sync(), "F8", True, True)
         self.act_snap = self._act("Snap grid (F9)", lambda _on: self._sync(), "F9", True, True)
         self.act_osnap = self._act("Object snap (F3)", lambda _on: self._sync(), "F3", True, True)
@@ -545,14 +586,34 @@ class MainWindow(QMainWindow):
         blk = self._find_block(name)
         if blk is None:
             return
-        dlg = BlockDialog(self, blk, folders=self.store.folders, rules=self.project.prefix_rules)
+        from .partprops import PartPropertiesDialog
+        dlg = PartPropertiesDialog(self, self.project, blk, None, folders=self.store.folders,
+                                   rules=self.project.prefix_rules)
         if not dlg.exec():
             return
-        v = dlg.values()
-        for k in ("description", "part_number", "manufacturer", "hyperlink", "tag_prefix",
-                  "poles", "increment", "prefix_rule", "connector"):
-            setattr(blk, k, v[k])
-        bk.rebuild_label(blk, v["labels"], v["label_pos"])
+        self._apply_block_values(name, dlg.values())
+        if dlg.geometry_requested:
+            self.on_edit_block_geometry(name)
+
+    def _apply_block_values(self, name, v):
+        """Block-level values from Part properties (all copies); saved to the library when the block lives there."""
+        import copy
+        blk = self._find_block(name)
+        if blk is None:
+            return
+        keys = ("description", "part_number", "manufacturer", "hyperlink", "tag_prefix", "poles", "increment",
+                "prefix_rule", "connector", "exclude_bom", "fp_w", "fp_h", "fp_d", "mount", "rail_cl")
+        same = all(getattr(blk, k) == v[k] for k in keys if k in v) \
+            and ("labels" not in v or (tuple(bk.label_lines_of(blk)) == tuple(v["labels"]) and blk.label_pos == v["label_pos"])) \
+            and ("folder" not in v or name not in self.store.blocks or blk.folder == v["folder"])
+        if same:
+            return
+        for k in ("description", "part_number", "manufacturer", "hyperlink", "tag_prefix", "poles", "increment",
+                  "prefix_rule", "connector", "exclude_bom", "fp_w", "fp_h", "fp_d", "mount", "rail_cl"):
+            if k in v:
+                setattr(blk, k, v[k])
+        if "labels" in v:
+            bk.rebuild_label(blk, v["labels"], v["label_pos"])
         if name in self.store.blocks:
             blk.folder = v["folder"]
             try:
@@ -1239,6 +1300,166 @@ class MainWindow(QMainWindow):
         self._refresh_all()                        # "01 OF 02" etc. on every sheet
         self._extra_dirty = True
         self._title()
+
+    # ------------------------------------------------------------ panel layout
+    def on_new_panel(self):
+        from .paneldlg import NewPanelDialog
+        from .. import panel as pn, model as mm
+        dlg = NewPanelDialog(self, list(self.project.blocks.values()))
+        if not dlg.exec():
+            return
+        title, w, h, block = dlg.values()
+        depth = 0.0
+        if block:
+            b = self.project.blocks[block]
+            w, h, depth = b.fp_w, b.fp_h, b.fp_d
+        page = max(self.project.sheets, default=0) + 1
+        if page > 99:
+            QMessageBox.warning(self, "Panel layout", "A project holds at most 99 sheets."); return
+        margin = 2.0
+        sheet = mm.Sheet(page, title, row_pitch=1.0, grid_divisions=3, width=max(w + 2 * margin, 8.0),
+                         height=max(h + 2 * margin, 6.0), zone0_y=margin, grid_x0=0.0)
+        sheet.panel = True
+        self.project.add_sheet(sheet)
+        i = self._add_tab(sheet)
+        self.tabs.setCurrentIndex(i)
+        sc = self.scene_
+        plate = mm.PanelObj("plate", sheet.width / 2, sheet.height / 2, w, h, depth=depth, block=block,
+                            style=mm.Style(layer=sc.panel_layer("plate")))
+        sc.add_entities([plate], "Back plate")
+        sc.apply_grid_divisions(3)
+        self.view.zoom_extents()
+        self._extra_dirty = True
+        self._title()
+        self._refresh_parts()
+        self.statusBar().showMessage("Panel layout started. Panel > Insert DIN rail / wire duct, or double-click a part in Panel parts", 10000)
+
+    def _panel_scene(self):
+        sc = self.scene_
+        if sc is None or not sc.sheet.panel:
+            QMessageBox.information(self, "Panel layout", "Open a panel layout sheet first (Panel > New panel layout...).")
+            return None
+        return sc
+
+    def on_insert_run(self, kind):
+        from .paneldlg import InsertRunDialog
+        sc = self._panel_scene()
+        if sc is None:
+            return
+        dlg = InsertRunDialog(self, kind)
+        if not dlg.exec():
+            return
+        sc.panel_spec, sc.panel_rot = dlg.spec(), 0.0
+        sc.request_tool("panel")
+        self.view.setFocus()
+
+    def on_place_panel_part(self, tag, block):
+        from .. import panel as pn
+        sc = self._panel_scene()
+        if sc is None:
+            return
+        blk = pn.effective_block(self.project, self.project.blocks.get(block), tag)
+        part = pn.footprint_part(blk, tag)
+        if part is None:
+            QMessageBox.information(self, "Panel layout", f"{block} ({tag}) has no footprint yet.\nDouble-click the part on the schematic and fill in "
+                                    "Panel footprint (or paste its manufacturer / part number if it has a saved profile).")
+            return
+        sc.panel_spec = {"kind": "part", "w": part.w, "h": part.h, "depth": part.depth, "block": block, "tag": tag,
+                         "mount": part.mount, "cl": part.cl}
+        sc.panel_rot = 0.0
+        sc.request_tool("panel")
+        self.view.setFocus()
+
+    def _footprint_blocks(self):
+        """Every block (project + library) that has a panel footprint."""
+        seen = {}
+        for src in (self.store.blocks.values(), self.project.blocks.values()):
+            for b in src:
+                seen[b.name] = b
+        return [b for b in seen.values() if b.fp_w > 0 and b.fp_h > 0 and b.mount]
+
+    def _terminal_blocks(self):
+        """Blocks in the library folder Terminals (or a sub-folder) that have a footprint."""
+        return [b for b in self._footprint_blocks() if b.folder.split("/")[0].strip().lower() == "terminals"]
+
+    def on_add_terminals(self):
+        import copy
+        from .paneldlg import TerminalsDialog
+        from .. import panel as pn
+        sc = self._panel_scene()
+        if sc is None:
+            return
+        dlg = TerminalsDialog(self, self._terminal_blocks(), lambda prefix: pn.next_ident(self.project, prefix))
+        if not dlg.exec():
+            return
+        name, qty, ident, first = dlg.values()
+        blk = self._find_block(name)
+        if blk is None:
+            return
+        if name not in self.project.blocks:                 # a library block comes into the project when used
+            self.project.blocks[name] = copy.deepcopy(blk)
+            self._refresh_library(); self._extra_dirty = True
+        one = pn.footprint_terminals(self.project.blocks[name], qty)
+        sc.panel_spec = {"kind": "terminals", "w": one.w, "h": one.h, "depth": one.depth, "block": name,
+                         "mount": one.mount, "cl": one.cl, "qty": one.qty,
+                         "ident": ident, "first": first}
+        sc.panel_rot = 0.0
+        sc.request_tool("panel")
+        self.view.setFocus()
+
+    def on_dimension(self):
+        sc = self._panel_scene()
+        if sc is None:
+            return
+        sc.request_tool("dim")
+        self.view.setFocus()
+
+    def on_panel_units(self):
+        sc = self._panel_scene()
+        if sc is None:
+            return
+        cur = 1 if sc.sheet.dim_units == "mm" else 0
+        name, ok = QInputDialog.getItem(self, "Dimension units", "Show dimensions in:", ["inches", "millimetres"], cur, False)
+        if ok:
+            sc.sheet.dim_units = "mm" if name.startswith("mill") else "in"
+            sc.rebuild()
+            self._extra_dirty = True
+            self._title()
+
+    def on_panel_size(self):
+        from .paneldlg import PanelSizeDialog
+        from ..ui.commands import EditCmd
+        from .. import model as mm
+        sc = self.scene_
+        sel = [e for e in sc.selected_entities() if isinstance(e, mm.PanelObj)] if sc is not None else []
+        if len(sel) != 1:
+            QMessageBox.information(self, "Size", "Select one rail, duct or back plate first."); return
+        e = sel[0]
+        dlg = PanelSizeDialog(self, e)
+        if dlg.exec():
+            v = dlg.values()
+            sc.undo.push(EditCmd(sc, "Size", modify=[(e, v)]))
+
+    def on_panel_gap(self):
+        sc = self.scene_
+        if sc is None:
+            return
+        v, ok = QInputDialog.getDouble(self, "Spacing", "Gap kept when snapping to another object (inches):",
+                                       sc.panel_gap, 0.0, 100.0, 3)
+        if ok:
+            for s in self._scenes():
+                s.panel_gap = v
+
+    def on_panel_check(self):
+        from .. import panel as pn
+        sc = self._panel_scene()
+        if sc is None:
+            return
+        probs = pn.problems(sc.sheet)
+        QMessageBox.information(self, "Check layout", "\n".join(probs) if probs else "No overlaps or parts off the plate / rail.")
+
+    def _refresh_parts(self):
+        self.parts.refresh(self.project)
 
     def _retitle_tabs(self):
         for i in range(self.tabs.count()):

@@ -165,10 +165,10 @@ class LibraryPanel(QDockWidget):
             for name in project_only:
                 it = QTreeWidgetItem(top, [name])
                 it.setData(0, KIND, "block"); it.setData(0, VALUE, name); it.setData(0, PROJ, True)
-        self.tree.expandAll()
+        self.tree.collapseAll()                                # folders start closed; the selected block's path opens
         for i in self._all_items():
             if (i.data(0, KIND), i.data(0, VALUE)) == sel:
-                self.tree.setCurrentItem(i)
+                self.tree.setCurrentItem(i)               # (also expands its parents)
         self._show()
 
     def _all_items(self):

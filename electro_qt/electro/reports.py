@@ -84,6 +84,14 @@ def bom(project):
             for k in blk.data:
                 if k not in keys:
                     keys.append(k)
+    from .panel import layout_parts
+    for name, qty in layout_parts(project).items():                  # terminal blocks etc.: only on the panel layout
+        blk = project.blocks[name]
+        g = groups.setdefault((blk.part_number, blk.manufacturer, blk.description, name), {"tags": [], "data": dict(blk.data)})
+        g["tags"].extend([""] * qty)
+        for k in blk.data:
+            if k not in keys:
+                keys.append(k)
     header = BOM_BASE + keys
     rows = []
     for i, ((pn, mf, ds, name), g) in enumerate(sorted(groups.items(), key=lambda kv: (kv[0][0] == "", kv[0][0], kv[0][3])), 1):

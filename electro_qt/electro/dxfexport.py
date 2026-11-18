@@ -130,6 +130,8 @@ class Exporter:
         self.doc = ez.new("R2010", setup=True)
         self.doc.header["$INSUNITS"] = 1                    # inches
         self.layers = {}
+        self.dim_units = "in"
+        self.dim_th = 0.14
         self.blocknames = {}
         self.add_layer("0", 7, "continuous", 0.0)
         for ly in project.layers.values():
@@ -201,6 +203,77 @@ class Exporter:
             lay.add_arc((e.cx, e.cy), e.r, e.start, e.end, dxfattribs=a)
         elif isinstance(e, m.Text):
             self.add_text(lay, e, a)
+        elif isinstance(e, m.PanelObj):
+            self.add_panel(lay, e, a)
+        elif isinstance(e, m.Dim):
+            self.add_dim(lay, e, a)
+
+    def add_dim(self, lay, d, a, units="in"):
+        """A horizontal / vertical dimension drawn as lines + text (extension lines, dimension line, arrow heads)."""
+        import math
+        from . import panel as pn
+        p1, p2 = (d.x1, d.y1), (d.x2, d.y2)
+        pa, pb = pn.dim_line(d)
+        th = d.th or self.dim_th
+        k = th / 0.14
+        for p, q in ((p1, pa), (p2, pb)):
+            dx, dy = q[0] - p[0], q[1] - p[1]
+            n = math.hypot(dx, dy)
+            if n > 0.05:
+                ux, uy = dx / n, dy / n
+                lay.add_line((p[0] + ux * 0.05, p[1] + uy * 0.05), (q[0] + ux * 0.08, q[1] + uy * 0.08), dxfattribs=a)
+        lay.add_line(pa, pb, dxfattribs=a)
+        L = math.hypot(pb[0] - pa[0], pb[1] - pa[1])
+        if L > 1e-9:
+            ux, uy = (pb[0] - pa[0]) / L, (pb[1] - pa[1]) / L
+            for tip, s in ((pa, 1.0), (pb, -1.0)):
+                bx, by = tip[0] + s * ux * 0.12 * k, tip[1] + s * uy * 0.12 * k
+                nx, ny = -uy * 0.03 * k, ux * 0.03 * k
+                lay.add_line(tip, (bx + nx, by + ny), dxfattribs=a)
+                lay.add_line(tip, (bx - nx, by - ny), dxfattribs=a)
+        mid = ((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2)
+        vert = d.orient == "v"
+        ins = (mid[0] - 0.05, mid[1]) if vert else (mid[0], mid[1] + 0.05)
+        t = dict(a, insert=ins, height=th, rotation=90 if vert else 0, halign=1, valign=0, align_point=ins)
+        lay.add_text(pn.dim_text(pn.dim_value(d), self.dim_units), dxfattribs=t)
+
+    def add_panel(self, lay, o, a):
+        """A panel layout object: its outline, a part's DIN rail centre line, and its label (to scale, inches)."""
+        from . import panel as pn
+        x0, y0, x1, y1 = pn.box(o)
+        lay.add_lwpolyline([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], close=True, dxfattribs=a)
+        if o.kind == "terminals" and o.qty > 1:                  # the stacked blocks
+            for i in range(1, o.qty):
+                if pn.axis(o) == "x":
+                    x = x0 + (x1 - x0) * i / o.qty
+                    lay.add_line((x, y0), (x, y1), dxfattribs=a)
+                else:
+                    y = y0 + (y1 - y0) * i / o.qty
+                    lay.add_line((x0, y), (x1, y), dxfattribs=a)
+        if o.kind in ("rail", "duct"):
+            p0, p1 = pn.end_points(o)
+            da = dict(a)
+            if self.linetype("dashed"):
+                da["linetype"] = self.linetype("dashed")
+            lay.add_line(p0, p1, dxfattribs=da)
+        if o.kind == "terminals" or (o.kind == "part" and not o.tag and (o.ident or o.names or o.first != 1)):
+            labels = pn.terminal_labels(o)
+            n = len(labels)
+            for i, t in enumerate(labels):
+                if pn.axis(o) == "x":
+                    c = (x0 + (x1 - x0) * (i + 0.5) / n, o.cy); cell = (x1 - x0) / n
+                else:
+                    c = (o.cx, y0 + (y1 - y0) * (i + 0.5) / n); cell = (y1 - y0) / n
+                hgt = max(0.04, min(0.2, cell / max(len(t), 1) * 1.4))
+                d = dict(a, insert=c, height=hgt, halign=1, valign=2, align_point=c, rotation=90 if pn.axis(o) == "x" else 0)
+                lay.add_text(t, dxfattribs=d)
+            return
+        label = o.tag or (f"{o.block} x{o.qty}" if o.kind == "terminals" else o.block) or ("DIN rail" if o.kind == "rail" else "Wire duct" if o.kind == "duct" else "")
+        if label and o.kind != "plate":
+            hgt = max(0.05, min(0.25, (y1 - y0) * 0.3, (x1 - x0) / max(len(label), 1) * 1.4))
+            d = dict(a, insert=(o.cx, o.cy), height=hgt, halign=1, valign=2)
+            d["align_point"] = (o.cx, o.cy)
+            lay.add_text(label, dxfattribs=d)
 
     def add_text(self, lay, t: m.Text, a):
         txt = text_value(t)
@@ -261,6 +334,8 @@ class Exporter:
     def add_sheet(self, sheet: m.Sheet):
         from . import fields
         fields.refresh_sheet(self.project, sheet)
+        self.dim_units = sheet.dim_units
+        self.dim_th = sheet.dim_th
         msp = self.doc.modelspace()
         for e in leaves(display_frame(sheet)):
             self.add_entity(msp, e)

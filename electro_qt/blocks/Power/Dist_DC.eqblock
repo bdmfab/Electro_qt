@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="Dist_DC" description="DESC" part_number="PSRS-24-120" tag_prefix="PS" hyperlink="" manufacturer="Rhino" increment="0" connector="0" exclude_bom="0" fp_w="1.57" fp_h="4.92" fp_d="4.81" mount="rail" rail_cl="0.0" prefix_rule="" poles="2" label_pos="above" folder="Power" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="0.0875" y1="0.0875" x2="0.0875" y2="-0.7875" id="7b189572-c6c1-419a-bda5-11bff9ecdc6b" layer="0" color="8" />
+    <line x1="0.0" y1="0.0" x2="0.0875" y2="0.0" id="7f2d8b71-e038-4ca9-9a58-6eadfbb5b5ee" layer="0" />
+    <line x1="0.0" y1="-0.7" x2="0.0875" y2="-0.7" id="1818eafb-f065-4dec-b832-f82a94790400" layer="0" />
+    <line x1="0.7875" y1="-0.7" x2="0.875" y2="-0.7" id="99426493-38e3-4795-b74f-21e65dbda810" layer="0" />
+    <text x="0.1272368098091068" y="-0.04776319019089392" resolved="&lt;size=0.833&gt;L1&lt;/size&gt;" height="0.12" rotation="0.0" id="8f72891c-2a98-4b42-a727-a82847553f00" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;L1&lt;/size&gt;</source>
+    </text>
+    <text x="0.1241125768428164" y="-0.39171098029713747" resolved="&lt;size=0.833&gt;L2&lt;/size&gt;" height="0.12" rotation="0.0" id="652f94b9-3882-43aa-8dc7-57209e6ad0d1" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;L2&lt;/size&gt;</source>
+    </text>
+    <text x="0.3490820650341506" y="-0.7478160109227092" resolved="&lt;size=0.833&gt;+24&lt;/size&gt;" height="0.12" rotation="0.0" id="abbdd0e1-912a-4fe1-af27-2338a109b1ac" align="right" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;+24&lt;/size&gt;</source>
+    </text>
+    <text x="0.7602249082348456" y="-0.7440991398066839" resolved="&lt;size=0.833&gt;0V&lt;/size&gt;" height="0.12" rotation="0.0" id="213283c5-3a51-40be-9e24-6befad9e58bc" align="right" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;0V&lt;/size&gt;</source>
+    </text>
+    <line x1="0.0875" y1="-0.7875" x2="0.7875" y2="-0.7875" id="66279626-9c5b-49e3-8414-c078c6fbe1b4" layer="0" color="8" />
+    <line x1="0.7875" y1="-0.7875" x2="0.7875" y2="-0.0125" id="927e7a43-0001-4e0f-8f02-8ac8b9fc69e1" layer="0" color="8" />
+    <line x1="0.6875" y1="0.0875" x2="0.0875" y2="0.0875" id="bc23e92c-d89b-436c-ab84-abc0fe2f02eb" layer="0" color="8" />
+    <line x1="0.0" y1="-0.35" x2="0.0875" y2="-0.35" id="898d72f4-0320-40c9-99cd-ab98a1ed82ea" layer="0" />
+    <line x1="0.6875" y1="0.0875" x2="0.7875" y2="-0.0125" id="fe157d2a-971f-4607-9d61-ceba20619aa2" layer="0" color="8" />
+    <text x="0.46411245411742275" y="0.1875" height="0.1" rotation="0.0" id="0f8c9554-86a8-460d-b49e-7aa14f6e2baa" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.46411245411742275" y="0.34750000000000003" height="0.1" rotation="0.0" id="2a42170d-2bf9-4675-ad12-bd7e3fa881be" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.46411245411742275" y="0.5075000000000001" height="0.1" rotation="0.0" id="c73f5a63-d075-4d87-9dd2-4dd285f56671" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.0" y="-0.35" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="3" x="-0.0" y="-0.7" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="4" x="0.875" y="-0.7" num_dx="0.0" num_dy="0.0" />
+</block>

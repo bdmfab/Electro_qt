@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<block name="Inline_24" description="24 VDC" part_number="xxxx" tag_prefix="" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" prefix_rule="" poles="1" label_pos="above" folder="Power" terminal_text_editable="0">
+<block name="Inline_24" description="24 VDC" part_number="xxxx" tag_prefix="" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" fp_w="1.574803" fp_h="4.92126" fp_d="4.80315" mount="rail" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="Power" terminal_text_editable="0">
   <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <entities>
     <line x1="0.0" y1="0.0" x2="0.0875" y2="0.0" id="e271d90b-2f70-45ae-be14-2b46c555dfb1" layer="0" />
@@ -26,13 +26,13 @@
     <text x="0.1241125768428164" y="-0.7417109802971371" resolved="&lt;size=0.833&gt;PE&lt;/size&gt;" height="0.12" rotation="0.0" id="23b76a05-d4b0-4324-8f81-d6b93fbd503e" align="left" tstyle="Default" rich="1" layer="0">
       <source>&lt;size=0.833&gt;PE&lt;/size&gt;</source>
     </text>
-    <text x="0.5073065338721948" y="0.1875" height="0.1" rotation="0.0" id="ad814757-2e95-4565-a196-c0c328a30ea3" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="0.5073065338721948" y="0.1875" height="0.1" rotation="0.0" id="bea95a56-a682-4e0f-80ef-b0966655fbba" align="center" tstyle="Default" rich="0" layer="0">
       <source>{tag}</source>
     </text>
-    <text x="0.5073065338721948" y="0.34750000000000003" height="0.1" rotation="0.0" id="9fda2a79-b375-4a93-94de-26fd4bf429fc" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="0.5073065338721948" y="0.34750000000000003" height="0.1" rotation="0.0" id="cb4c467f-6706-4623-a40c-ed163d8cbbf9" align="center" tstyle="Default" rich="0" layer="0">
       <source>{part_label}</source>
     </text>
-    <text x="0.5073065338721948" y="0.5075000000000001" height="0.1" rotation="0.0" id="96565ede-107f-4d4e-8a63-d94c1f76d7c5" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="0.5073065338721948" y="0.5075000000000001" height="0.1" rotation="0.0" id="45408eb5-5aed-4a64-8486-3076e60b571d" align="center" tstyle="Default" rich="0" layer="0">
       <source>{description}</source>
     </text>
   </entities>

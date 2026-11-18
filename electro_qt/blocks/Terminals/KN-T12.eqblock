@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="KN-T12" description="SLTB" part_number="" tag_prefix="TB" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" fp_w="0.2" fp_h="1.74" fp_d="1.67" mount="rail" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="Terminals" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="-0.1" y1="-0.87" x2="0.1" y2="-0.87" id="7c246ad3-eb18-453b-86db-3af1e1f33420" layer="0" />
+    <line x1="0.1" y1="-0.87" x2="0.1" y2="0.87" id="78aa87b1-ff5d-40cc-bbf4-cbe2c3157a15" layer="0" />
+    <line x1="0.1" y1="0.87" x2="-0.1" y2="0.87" id="313f1adb-3274-470a-a816-dfaaf7bb5c5f" layer="0" />
+    <line x1="-0.1" y1="0.87" x2="-0.1" y2="-0.87" id="06fb2491-62c6-4274-9ac4-ce4e422c6a62" layer="0" />
+    <circle cx="0.0" cy="0.245000000000001" r="0.05017887321269613" id="1b592f96-c22a-4189-bec4-ef40a15356cf" filled="0" layer="0" />
+    <circle cx="0.0" cy="-0.24499999999999744" r="0.05" id="ad9f9250-17ef-4074-b790-a4e69dedbade" filled="0" layer="0" />
+  </entities>
+</block>

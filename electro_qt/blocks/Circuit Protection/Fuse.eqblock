@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="Fuse" description="?A" part_number="DN-F6" tag_prefix="FU" hyperlink="https://www.automationdirect.com/adc/shopping/catalog/wire_-a-_cable_termination/terminal_blocks/circuit_protection_terminal_blocks/dn-f6" manufacturer="Automation Direct" increment="1" connector="0" exclude_bom="0" fp_w="0.39" fp_h="3.23" fp_d="2.0" mount="rail" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="Circuit Protection" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="0.0" y1="0.0" x2="0.0875" y2="0.0" id="d3447953-56dd-4a64-8694-b434e3b33e04" layer="0" />
+    <line x1="0.0875" y1="0.0" x2="0.0875" y2="0.0875" id="f59424e1-ca0a-491f-aa55-bcb5ed1ed348" layer="0" />
+    <line x1="0.0875" y1="0.0875" x2="0.175" y2="0.0875" id="064045ce-f85b-46b2-ad7d-fcceae633ea4" layer="0" />
+    <line x1="0.175" y1="0.0875" x2="0.175" y2="-0.0875" id="05754249-4bfa-4733-9872-e9600fd2af62" layer="0" />
+    <line x1="0.175" y1="-0.0875" x2="0.0875" y2="-0.0875" id="bdf82e71-6343-486a-a2c1-66bb6ca082d5" layer="0" />
+    <line x1="0.0875" y1="-0.0875" x2="0.0875" y2="0.0" id="76a16910-11cf-44e5-a09f-378d643e1df6" layer="0" />
+    <line x1="0.175" y1="0.06" x2="0.35" y2="0.06" id="caf1985c-8d37-4709-b58f-933fa24d6cc9" layer="0" />
+    <line x1="0.175" y1="-0.06" x2="0.35" y2="-0.06" id="c17d89cf-7876-4bff-914e-7b615915783e" layer="0" />
+    <line x1="0.35" y1="0.0875" x2="0.35" y2="-0.0875" id="0debb176-ff23-4880-8bc1-3c6dcf3d60c7" layer="0" />
+    <line x1="0.35" y1="-0.0875" x2="0.4375" y2="-0.0875" id="5939b1ac-b846-4ff1-ab38-e711824b720e" layer="0" />
+    <line x1="0.4375" y1="-0.0875" x2="0.4375" y2="0.0875" id="75e269e4-b957-41c8-a78a-0953eff0c142" layer="0" />
+    <line x1="0.4375" y1="0.0875" x2="0.35" y2="0.0875" id="1da609df-eca7-44e6-9afc-dc7b0c0260f7" layer="0" />
+    <line x1="0.4375" y1="0.0" x2="0.525" y2="0.0" id="15092cb8-fc0b-432e-84c2-60314c2e8db6" layer="0" />
+    <text x="0.2625" y="0.1875" height="0.1" rotation="0.0" id="a4eec80e-fb5a-4992-9456-82a8b0b4288b" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.2625" y="0.34750000000000003" height="0.1" rotation="0.0" id="a71ea997-da76-4c30-8240-2eed06ee3173" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.2625" y="0.5075000000000001" height="0.1" rotation="0.0" id="30dc0359-57c3-4d18-81cd-916986f867c2" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.525" y="0.0" num_dx="0.0" num_dy="0.0" />
+</block>

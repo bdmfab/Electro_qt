@@ -52,6 +52,8 @@ class EditorScene(QGraphicsScene):
     blocks_changed = Signal()     # a block definition was added / removed
     tool_changed = Signal(str)    # tool name (so the toolbar can follow)
     layers_changed = Signal()
+    panel_placed = Signal()          # a panel object was placed / changed (the parts list refreshes)
+    block_values_changed = Signal(str, object)    # block-level values from Part properties (name, values)
     edit_block_requested = Signal(str)     # open a block's geometry in its own tab
 
     def __init__(self, project: m.Project, sheet: m.Sheet, parent=None):
@@ -85,6 +87,7 @@ class EditorScene(QGraphicsScene):
         self._press_time, self._press_on_item = 0.0, False
         self.grip_hover = None
         self.grip_anchor = None
+        self.panel_spec, self.panel_rot, self.panel_gap = None, 0.0, 0.0   # what the panel tool places
         self._grips_cache = None          # grips of the current selection (rebuilt when it or the geometry changes)
         self.selectionChanged.connect(self._drop_grips)
         self.undo.indexChanged.connect(self._drop_grips)
@@ -285,6 +288,8 @@ class EditorScene(QGraphicsScene):
         from PySide6.QtGui import QPixmap
         from .items import LogoItem
         self._logo_item = None
+        if self.sheet.panel:
+            return                                  # a panel layout has no title block image
         name, box = self.project.info.get("cover_image" if self.sheet.cover else "logo"), self.logo_box()
         data = self.project.assets.get(name) if name else None
         if not data or not box:
@@ -333,6 +338,15 @@ class EditorScene(QGraphicsScene):
         ids = {it.entity_id for it in self.selectedItems() if hasattr(it, "entity_id")}
         return [e for e in self.sheet.entities if e.id in ids]
 
+    @staticmethod
+    def is_pinned(e):
+        """A locked rail / duct cannot be moved, turned or resized."""
+        from .. import panel as pn
+        return pn.pinned(e)
+
+    def movable_entities(self):
+        return [e for e in self.selected_entities() if not self.is_pinned(e)]
+
     # ------------------------------------------------------------ layers
     def is_numbered_wire(self, layer_name):
         lay = self.layers.get(layer_name)
@@ -362,6 +376,46 @@ class EditorScene(QGraphicsScene):
         self.layers_changed.emit()
 
     # ------------------------------------------------------------ creation
+    PANEL_LAYERS = {"plate": ("Panel plate", 8), "rail": ("Panel rail", 9), "duct": ("Panel duct", 2),
+                    "part": ("Panel parts", 5), "terminals": ("Panel parts", 5), "dim": ("Panel dims", 3)}
+
+    def panel_layer(self, kind):
+        name, color = self.PANEL_LAYERS.get(kind, ("Panel parts", 5))
+        if name not in self.project.layers:
+            self.project.layers[name] = m.Layer(name, color)
+            self.layers_changed.emit()
+        return name
+
+    def toggle_lock(self):
+        """Lock / unlock the selected rails and ducts (a locked one shows no end handles)."""
+        sel = [e for e in self.selected_entities() if isinstance(e, m.PanelObj) and e.kind in ("rail", "duct")]
+        if not sel:
+            self.say("Select a DIN rail or wire duct to lock / unlock it"); return
+        lock = not all(e.locked for e in sel)
+        self.undo.push(EditCmd(self, "Lock" if lock else "Unlock", modify=[(e, {"locked": lock}) for e in sel]))
+        self.say(("Locked" if lock else "Unlocked") + f" {len(sel)} object(s)")
+
+    def ungroup_terminals(self):
+        """Split the selected terminal stacks into their separate blocks."""
+        from .. import panel as pn
+        stacks = [e for e in self.selected_entities() if isinstance(e, m.PanelObj) and e.kind == "terminals"]
+        if not stacks:
+            return
+        kids = [k for s in stacks for k in pn.ungroup(s)]
+        self.undo.push(EditCmd(self, "Ungroup terminals", add=kids, remove=stacks))
+        self._select_entities(kids)
+
+    def toggle_bom(self):
+        """Leave the selected layout-only parts (terminal blocks) out of / back into the BOM."""
+        sel = [e for e in self.selected_entities() if isinstance(e, m.PanelObj) and e.kind in ("part", "terminals")
+               and not e.tag]
+        if not sel:
+            return
+        out = not all(e.xbom for e in sel)
+        self.undo.push(EditCmd(self, "Exclude from BOM" if out else "Include in BOM",
+                               modify=[(e, {"xbom": out}) for e in sel]))
+        self.say(("Left out of" if out else "Back in") + " the BOM")
+
     def new_style(self, color=None) -> m.Style:
         return m.Style(layer=self.current_layer, color=color)
 
@@ -442,7 +496,7 @@ class EditorScene(QGraphicsScene):
         self._select_entities(kids)
 
     def align_selected(self, mode):
-        items = [(e, bounds([e], self.project.blocks)) for e in self.selected_entities()]
+        items = [(e, bounds([e], self.project.blocks)) for e in self.movable_entities()]
         items = [(e, b) for e, b in items if b]
         moves = [(e, dx, dy) for e, dx, dy in align_moves(items, mode) if abs(dx) > 1e-9 or abs(dy) > 1e-9]
         if moves:
@@ -555,7 +609,7 @@ class EditorScene(QGraphicsScene):
         """fn(entity, pivot) mutates in place; the whole selection is one undo step.
         The pivot is the centre of the selection, rounded to the grid so grid-aligned
         drawings stay on the grid."""
-        sel = self.selected_entities()
+        sel = self.movable_entities()
         if not sel:
             return
         b = bounds(sel, self.project.blocks)
@@ -639,6 +693,19 @@ class EditorScene(QGraphicsScene):
             sub = menu.addMenu("Mirror")
             acts[sub.addAction("Flip left-right")] = lambda: self.mirror_selected("v")
             acts[sub.addAction("Flip top-bottom")] = lambda: self.mirror_selected("h")
+        if any(isinstance(e, m.PanelObj) and e.kind in ("rail", "duct") for e in sel):
+            rd = [e for e in sel if isinstance(e, m.PanelObj) and e.kind in ("rail", "duct")]
+            acts[menu.addAction("Unlock\tL" if all(e.locked for e in rd) else "Lock\tL")] = self.toggle_lock
+        tl = [e for e in sel if isinstance(e, m.PanelObj) and (e.kind == "terminals" or (e.kind == "part" and not e.tag))]
+        if tl:
+            acts[menu.addAction("Terminal labels...")] = lambda: self.edit_terminals(tl[0])
+        if any(isinstance(e, m.PanelObj) and e.kind == "terminals" for e in sel):
+            acts[menu.addAction("Ungroup terminal blocks")] = self.ungroup_terminals
+        if any(isinstance(e, m.Dim) for e in sel):
+            acts[menu.addAction("Dimension text height...")] = self.dim_text_height
+        lay = [e for e in sel if isinstance(e, m.PanelObj) and e.kind in ("part", "terminals") and not e.tag]
+        if lay:
+            acts[menu.addAction("Include in BOM" if all(e.xbom for e in lay) else "Exclude from BOM")] = self.toggle_bom
         if any(isinstance(e, m.Rect) for e in sel):
             acts[menu.addAction("Explode rectangle into lines")] = self.explode_rects
         if groups:
@@ -662,6 +729,10 @@ class EditorScene(QGraphicsScene):
             if len(sel) == 1 and isinstance(sel[0], m.BlockRef):
                 acts[menu.addAction("Part properties...")] = lambda r=sel[0]: self.edit_part(r)
                 acts[menu.addAction("Edit block geometry...")] = lambda r=sel[0]: self.edit_block_requested.emit(r.block)
+            plate = [e for e in sel if isinstance(e, m.BlockRef) and self.project.blocks.get(e.block) is not None
+                     and self.project.blocks[e.block].mount]
+            if plate:
+                acts[menu.addAction(f"Apply footprint profile to {len(plate)} part(s)...")] = lambda p=plate: self.apply_profile(p)
             if any(isinstance(e, m.BlockRef) for e in sel):
                 acts[menu.addAction("Explode block")] = self.explode_blocks
             if any(isinstance(e, m.BlockRef) and ("label_dx" in e.props or "label_dy" in e.props) for e in sel):
@@ -725,6 +796,16 @@ class EditorScene(QGraphicsScene):
                 for kind, key, pt in line_grips(ln, nodes):
                     out.append((kind, key, pt, ln))
         for e in sel:
+            if isinstance(e, m.Dim):
+                from .. import panel as pn
+                a, b = pn.dim_line(e)
+                out.append(("dpos", 0, ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), e))
+                out.append(("dp1", 0, (e.x1, e.y1), e))
+                out.append(("dp2", 1, (e.x2, e.y2), e))
+            if isinstance(e, m.PanelObj) and e.kind in ("rail", "duct") and not e.locked:
+                from .. import panel as pn
+                for i, pt in enumerate(pn.end_points(e)):
+                    out.append(("pend", i, pt, e))
             if isinstance(e, m.Circle):
                 kind, key, pt = circle_grip(e)
                 out.append((kind, key, pt, e))
@@ -756,6 +837,12 @@ class EditorScene(QGraphicsScene):
             self.grip_anchor = other
             self.grip_drag = {"kind": kind, "key": key, "ent": e, "tops": [e],
                               "before": [(e, {"x1": e.x1, "y1": e.y1, "x2": e.x2, "y2": e.y2})]}
+        elif kind in ("dpos", "dp1", "dp2"):
+            self.grip_drag = {"kind": kind, "key": key, "ent": e, "tops": [e],
+                              "before": [(e, {"x1": e.x1, "y1": e.y1, "x2": e.x2, "y2": e.y2, "pos": e.pos})]}
+        elif kind == "pend":
+            self.grip_drag = {"kind": kind, "key": key, "ent": e, "tops": [e],
+                              "before": [(e, {"cx": e.cx, "cy": e.cy, "w": e.w})]}
         elif kind == "label":
             self.grip_drag = {"kind": kind, "ent": e, "tops": [e], "before": [(e, {"props": dict(e.props)})],
                               "pt": pt, "off": bk.label_offset(e)}
@@ -780,6 +867,19 @@ class EditorScene(QGraphicsScene):
                 e.x1, e.y1 = x, y
             else:
                 e.x2, e.y2 = x, y
+        elif kind == "dpos":
+            e.pos = self.cursor.point[1 if e.orient == "h" else 0]
+        elif kind == "dp1":
+            e.x1, e.y1 = self.cursor.point
+        elif kind == "dp2":
+            e.x2, e.y2 = self.cursor.point
+        elif kind == "pend":
+            from .. import panel as pn
+            i = 0 if pn.axis(e) == "x" else 1
+            v = self.cursor.point[i]
+            v, _ = pn.snap_line(pn.panel_objects(self.sheet.entities), i, v, 10.0 / self.view_scale, self.panel_gap,
+                                exclude=(e,))
+            pn.set_end(e, d["key"], (v, v))
         elif kind == "label":
             x, y = self.cursor.point
             e.props["label_dx"] = f"{d['off'][0] + x - d['pt'][0]:.4f}"
@@ -801,11 +901,13 @@ class EditorScene(QGraphicsScene):
                 self.sync_refresh(t)
             return
         self.undo.push(StateCmd(self, d["tops"], d["before"], after,
-                                {"mid": "Move segment", "end": "Move end", "radius": "Resize circle", "label": "Move label"}[d["kind"]]))
+                                {"mid": "Move segment", "end": "Move end", "radius": "Resize circle", "label": "Move label",
+                                 "pend": "Resize rail / duct", "dpos": "Move dimension", "dp1": "Move dimension point",
+                                 "dp2": "Move dimension point"}[d["kind"]]))
 
     def _paint_grips(self, p, vs):
         h = 5.0 / vs
-        colors = {"end": "#4d9dff", "mid": "#7ad07a", "radius": "#ff9f43", "label": "#c77dff"}
+        colors = {"end": "#4d9dff", "mid": "#7ad07a", "radius": "#ff9f43", "label": "#c77dff", "pend": "#ffd400", "dpos": "#ffd400", "dp1": "#4d9dff", "dp2": "#4d9dff"}
         for kind, key, (x, y), e in self.grips():
             active = (self.grip_drag is not None and self.grip_drag["ent"] is e and self.grip_drag["kind"] == kind) \
                 or self.grip_hover == (kind, key, id(e))
@@ -815,6 +917,9 @@ class EditorScene(QGraphicsScene):
         d = self.grip_drag
         if d is not None and d["kind"] == "radius":
             self.draw_label(p, self.cursor.point, f"R {d['ent'].r:.3f}", vs)
+        if d is not None and d["kind"] == "pend":
+            e = d["ent"]
+            self.draw_label(p, self.cursor.point, f"L {e.w:.3f} in  ({e.w * 25.4:.1f} mm)", vs)
 
     # ------------------------------------------------------------ blocks
     def slot_points(self):
@@ -842,11 +947,12 @@ class EditorScene(QGraphicsScene):
         if not sel:
             self.say("Select the part's drawing (and its wire# slots) first"); return
         from PySide6.QtWidgets import QMessageBox
-        from .blockdlg import BlockDialog
+        from .partprops import PartPropertiesDialog
         marks = [e for e in leaves(sel) if isinstance(e, m.SlotMark)]
-        dlg = BlockDialog(QApplication.activeWindow(), poles=max(1, len(marks) // 2),
-                          folders=self.folder_choices, rules=self.project.prefix_rules,
-                          slot_names=[mk.terminal for mk in marks])
+        dlg = PartPropertiesDialog(QApplication.activeWindow(), self.project, None, None,
+                                   poles=max(1, len(marks) // 2),
+                                   folders=self.folder_choices, rules=self.project.prefix_rules,
+                                   slot_names=[mk.terminal for mk in marks])
         if not dlg.exec():
             return
         v = dlg.values()
@@ -954,12 +1060,17 @@ class EditorScene(QGraphicsScene):
         blk = self.project.blocks.get(ref.block)
         if blk is None:
             return
-        from .partdlg import PartDialog
-        dlg = PartDialog(QApplication.activeWindow(), self.project, blk, ref)
+        from .partprops import PartPropertiesDialog
+        dlg = PartPropertiesDialog(QApplication.activeWindow(), self.project, blk, ref,
+                                   folders=self.folder_choices, rules=self.project.prefix_rules)
         if dlg.exec():
-            tag, props = dlg.result()
+            tag, props = dlg.part_result()                   # (saves / updates the footprint profile)
             if tag != ref.tag or props != ref.props:
                 self.undo.push(EditCmd(self, "Part properties", modify=[(ref, {"tag": tag, "props": props})]))
+            self.block_values_changed.emit(blk.name, dlg.values())      # type, prefix, poles ... (all copies)
+            self.panel_placed.emit()                         # the Panel parts list re-reads footprints
+            if dlg.geometry_requested:
+                self.edit_block_requested.emit(blk.name)
 
     # ------------------------------------------------------------ wire numbers
     def _selected_wires(self):
@@ -1212,9 +1323,11 @@ class EditorScene(QGraphicsScene):
                  if hasattr(it, "entity_id") and (it.pos().x() or it.pos().y())]
         if moved:
             dx, dy = moved[0][1].x(), moved[0][1].y()
-            ents = self.selected_entities()
+            ents = self.movable_entities()
             for it, _ in moved:
                 it.setPos(0, 0)
+            if not ents:
+                return
             refs = [e for e in leaves(ents) if isinstance(e, m.BlockRef)]
             moved_ids = {x.id for x in leaves(ents)}
             mods, adds, rems = bk.follow_plan(self.project, self.sheet, refs, dx, dy, moved_ids) if refs else ([], [], [])
@@ -1256,12 +1369,77 @@ class EditorScene(QGraphicsScene):
                 if isinstance(e, m.BlockRef):
                     self.edit_part(e)
                     return
+                if isinstance(e, m.Dim):
+                    self.dim_text_height([e])
+                    return
+                if isinstance(e, m.PanelObj) and (e.kind == "terminals" or (e.kind == "part" and not e.tag)):
+                    self.edit_terminals(e)
+                    return
                 if isinstance(e, m.SlotMark):
                     name, ok = QInputDialog.getText(QApplication.activeWindow(), "Wire# slot", "Terminal name:", text=e.terminal)
                     if ok:
                         self.undo.push(EditCmd(self, "Rename slot", modify=[(e, {"terminal": name.strip()})]))
                     return
         super().mouseDoubleClickEvent(ev)
+
+    def apply_profile(self, refs):
+        """Give every selected part the same footprint profile (manufacturer, part number, hyperlink follow it)."""
+        from .. import profiles as pf
+        blocks = {r.block for r in refs}
+        profs = pf.load()
+        if len(blocks) == 1:                                  # only the block's own profiles
+            profs = pf.for_block(profs, next(iter(blocks)))
+        if not profs:
+            self.say("No profiles for this block yet: open Part properties on a part, fill in its footprint and press OK"); return
+        name, ok = QInputDialog.getItem(QApplication.activeWindow(), "Footprint profile", "Profile:", sorted(profs), 0, False)
+        if not ok:
+            return
+        pr = profs[name]
+        mods = []
+        for r in refs:
+            props = dict(r.props)
+            props["profile"] = name
+            for key, val in (("manufacturer", pr["manufacturer"]), ("part_number", pr["part_number"]), ("hyperlink", pr["hyperlink"])):
+                if val:
+                    props[key] = val
+            mods.append((r, {"props": props}))
+        self.undo.push(EditCmd(self, "Apply profile", modify=mods))
+        self.panel_placed.emit()
+
+    def edit_terminals(self, e):
+        """Identifier (TB1) and per-terminal labels (TB1.1 ...) of a terminal block / stack."""
+        from .paneldlg import TerminalLabelsDialog
+        from .. import panel as pn
+        dlg = TerminalLabelsDialog(QApplication.activeWindow(), e)
+        if not dlg.exec():
+            return
+        ident, first, labels = dlg.values()
+        tmp = m.PanelObj(e.kind, 0, 0, 1, 1, qty=e.qty)
+        pn.set_terminal_labels(tmp, ident, first, labels)
+        if (tmp.ident, tmp.first, tmp.names) != (e.ident, e.first, e.names):
+            self.undo.push(EditCmd(self, "Terminal labels", modify=[(e, {"ident": tmp.ident, "first": tmp.first, "names": tmp.names})]))
+
+    def dim_text_height(self, dims=None):
+        """Text height of the selected dimensions; with none selected, the sheet's default (every dimension
+        without its own height follows it). Shown in the sheet's dimension units."""
+        dims = dims if dims is not None else [e for e in self.selected_entities() if isinstance(e, m.Dim)]
+        mm = self.sheet.dim_units == "mm"
+        k = 25.4 if mm else 1.0
+        cur = (dims[0].th or self.sheet.dim_th) if dims else self.sheet.dim_th
+        what = f"{len(dims)} selected dimension(s)" if dims else "all dimensions (sheet default)"
+        v, ok = QInputDialog.getDouble(QApplication.activeWindow(), "Dimension text height",
+                                       f"Text height for {what}, in {'mm' if mm else 'inches'}:",
+                                       round(cur * k, 3), 0.01, 100.0, 3)
+        if not ok:
+            return
+        h = v / k
+        if dims:
+            self.undo.push(EditCmd(self, "Dimension text height", modify=[(d, {"th": h}) for d in dims]))
+        else:
+            alld = [d for d in self.sheet.entities if isinstance(d, m.Dim)]
+            self.sheet.dim_th = h                       # new dimensions follow it too
+            if alld:
+                self.undo.push(EditCmd(self, "Dimension text height", modify=[(d, {"th": h}) for d in alld]))
 
     def edit_text(self, e: m.Text):
         from .textdlg import RichTextDialog
@@ -1317,6 +1495,8 @@ class EditorScene(QGraphicsScene):
             else:
                 self.say("Q: select a numbered wire (or hover over it) to mark it")
             ev.accept(); return
+        if k == Qt.Key.Key_L and self.tool.name == "select" and not ev.modifiers():
+            self.toggle_lock(); ev.accept(); return
         if enter:
             if self.tool.name == "select":
                 self.repeat_last()                 # Space/Enter = repeat last command

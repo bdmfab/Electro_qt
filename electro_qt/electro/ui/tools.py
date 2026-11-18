@@ -801,3 +801,8 @@ TOOLS = {"select": SelectTool, "line": LineTool, "rect": RectTool, "circle": Cir
          "chamfer": ChamferTool, "multiline": MultilineTool, "paste": PasteTool, "resize": ResizeTool,
          "slot": SlotTool, "place": PlaceBlockTool, "origin": OriginTool,
          "arc": ArcTool, "base": BasePointTool}
+
+from .paneltools import PanelPlaceTool          # (after Tool exists: paneltools builds on it)
+from .paneltools import DimTool
+TOOLS["panel"] = PanelPlaceTool
+TOOLS["dim"] = DimTool

@@ -35,6 +35,11 @@ def translate(e, dx: float, dy: float) -> None:
         e.cx += dx; e.cy += dy
     elif isinstance(e, (m.Text, m.BlockRef, m.SlotMark)):
         e.x += dx; e.y += dy
+    elif isinstance(e, m.PanelObj):
+        e.cx += dx; e.cy += dy
+    elif isinstance(e, m.Dim):
+        e.x1 += dx; e.x2 += dx; e.y1 += dy; e.y2 += dy
+        e.pos += dy if e.orient == "h" else dx
 
 
 def arc_point(a: m.Arc, deg: float):
@@ -51,6 +56,18 @@ def snap_points(e):
     elif isinstance(e, m.Line):
         out += [("end", (e.x1, e.y1)), ("end", (e.x2, e.y2)),
                 ("mid", ((e.x1 + e.x2) / 2, (e.y1 + e.y2) / 2))]
+    elif isinstance(e, m.PanelObj):
+        from .panel import box
+        x0, y0, x1, y1 = box(e)
+        xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
+        out += [("end", p) for p in ((x0, y0), (x1, y0), (x1, y1), (x0, y1))]
+        out += [("mid", p) for p in ((xm, y0), (x1, ym), (xm, y1), (x0, ym))]
+        out.append(("center", (xm, ym)))
+    elif isinstance(e, m.Dim):
+        from .panel import dim_line
+        a, c = dim_line(e)
+        out += [("end", (e.x1, e.y1)), ("end", (e.x2, e.y2)), ("end", a), ("end", c),
+                ("mid", ((a[0] + c[0]) / 2, (a[1] + c[1]) / 2))]
     elif isinstance(e, m.Rect):
         x0, y0, x1, y1 = e.x, e.y, e.x + e.w, e.y + e.h
         xm, ym = (x0 + x1) / 2, (y0 + y1) / 2
@@ -659,6 +676,22 @@ def rotate_entity(e, pivot, deg):
     elif isinstance(e, (m.Text, m.BlockRef, m.SlotMark)):
         e.x, e.y = _rot((e.x, e.y), pivot, deg)
         e.rotation = (e.rotation + deg) % 360
+    elif isinstance(e, m.Dim):
+        if abs(deg / 90 - round(deg / 90)) > 1e-9:
+            raise ValueError("Dimensions turn in 90 degree steps")
+        from .panel import dim_line
+        a, _ = dim_line(e)
+        e.x1, e.y1 = _rot((e.x1, e.y1), pivot, deg)
+        e.x2, e.y2 = _rot((e.x2, e.y2), pivot, deg)
+        ax, ay = _rot(a, pivot, deg)
+        if int(round(deg / 90)) % 2:
+            e.orient = "v" if e.orient == "h" else "h"
+        e.pos = ay if e.orient == "h" else ax
+    elif isinstance(e, m.PanelObj):
+        if abs(deg / 90 - round(deg / 90)) > 1e-9:
+            raise ValueError("Panel objects turn in 90 degree steps")
+        from .panel import rotate as _prot
+        _prot(e, pivot, deg)
 
 
 def mirror_entity(e, axis, c):
@@ -679,7 +712,16 @@ def mirror_entity(e, axis, c):
             e.x = 2 * c - (e.x + e.w)
         else:
             e.y = 2 * c - (e.y + e.h)
-    elif isinstance(e, m.Circle):
+    elif isinstance(e, m.Dim):
+        if vert:
+            e.x1, e.x2 = 2 * c - e.x1, 2 * c - e.x2
+            if e.orient == "v":
+                e.pos = 2 * c - e.pos
+        else:
+            e.y1, e.y2 = 2 * c - e.y1, 2 * c - e.y2
+            if e.orient == "h":
+                e.pos = 2 * c - e.pos
+    elif isinstance(e, (m.Circle, m.PanelObj)):
         if vert:
             e.cx = 2 * c - e.cx
         else:

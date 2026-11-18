@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="3PH_Disconnect_Fused" description="DESC" part_number="37105003" tag_prefix="DS" hyperlink="" manufacturer="Automation Direct" increment="1" connector="0" exclude_bom="0" fp_w="3.68" fp_h="4.57" fp_d="3.29" mount="plate" rail_cl="0.0" prefix_rule="" poles="3" label_pos="right" folder="Disconnect" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <blocklayer name="Dashed" color="7" kind="graphics" numbered="0" scheme="" linetype="dashed" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="0.0" y1="0.0" x2="0.0" y2="-0.175" id="c7652aa6-2c18-4db4-babe-584cd20efddd" layer="0" />
+    <line x1="0.0" y1="-0.175" x2="0.0875" y2="-0.35" id="c61fa827-d569-4f48-9061-a0886f812842" layer="0" />
+    <line x1="0.0" y1="-0.35" x2="0.0" y2="-0.525" id="74bf2cce-24be-47be-89b2-d34b42af99b6" layer="0" />
+    <line x1="-0.0875" y1="-0.6125" x2="0.0875" y2="-0.6125" id="4cd1b29c-9a82-4e9d-92bc-6b34ee23bfab" layer="0" />
+    <line x1="0.0875" y1="-0.6125" x2="0.0875" y2="-0.525" id="add77c54-3795-4780-bc82-87827c3bf8a3" layer="0" />
+    <line x1="0.0875" y1="-0.525" x2="-0.0875" y2="-0.525" id="44acfbe0-2ab6-4bc8-9308-3c910c4fb985" layer="0" />
+    <line x1="-0.0875" y1="-0.525" x2="-0.0875" y2="-0.6125" id="e54b8e6e-78c3-4684-bbee-37b6f78ac7da" layer="0" />
+    <line x1="-0.0875" y1="-0.875" x2="0.0875" y2="-0.875" id="4da07b73-e57b-4805-8080-764497cdede7" layer="0" />
+    <line x1="0.0875" y1="-0.875" x2="0.0875" y2="-0.7875" id="8214b0e9-0e73-4bb6-940f-9bc87b308499" layer="0" />
+    <line x1="0.0875" y1="-0.7875" x2="-0.0875" y2="-0.7875" id="19e12b14-e9e8-4c8b-b45e-ceb8ad086838" layer="0" />
+    <line x1="-0.0875" y1="-0.7875" x2="-0.0875" y2="-0.875" id="bf5cda6c-2c4b-4936-af2f-6c51e32f0c40" layer="0" />
+    <line x1="-0.07" y1="-0.6125" x2="-0.07" y2="-0.7875" id="72bf16ae-a36d-4fc4-9cc5-e2fc9b2e7329" layer="0" />
+    <line x1="0.07" y1="-0.6125" x2="0.07" y2="-0.7875" id="130b2d6a-b480-4811-bddd-525c19817e58" layer="0" />
+    <line x1="0.0" y1="-0.875" x2="0.0" y2="-1.05" id="edb49bd0-8c48-4abb-9968-d79cd4aae7db" layer="0" />
+    <line x1="0.35" y1="0.0" x2="0.35" y2="-0.175" id="4e74f7fe-8859-442d-8bb5-b5116f3edc81" layer="0" />
+    <line x1="0.35" y1="-0.175" x2="0.4375" y2="-0.35" id="4c2c1c88-a62c-4181-838e-b5ab926e7d33" layer="0" />
+    <line x1="0.35" y1="-0.35" x2="0.35" y2="-0.525" id="67ce27df-001b-46ef-be73-d818aa9193d0" layer="0" />
+    <line x1="0.2625" y1="-0.6125" x2="0.4375" y2="-0.6125" id="798a9d6a-78e3-4003-b38e-c41d6535c8b9" layer="0" />
+    <line x1="0.4375" y1="-0.6125" x2="0.4375" y2="-0.525" id="56ebdcee-30e4-4b88-b9b9-70158d7b1197" layer="0" />
+    <line x1="0.4375" y1="-0.525" x2="0.2625" y2="-0.525" id="296290c0-6870-459a-bd35-2a7c11e44ff7" layer="0" />
+    <line x1="0.2625" y1="-0.525" x2="0.2625" y2="-0.6125" id="9500f56a-f255-4db9-babc-001331497721" layer="0" />
+    <line x1="0.2625" y1="-0.875" x2="0.4375" y2="-0.875" id="b6ad5c0f-fb78-4469-933e-390625965c8c" layer="0" />
+    <line x1="0.4375" y1="-0.875" x2="0.4375" y2="-0.7875" id="c9b94ebf-9181-4fb3-b4ce-552ce916413e" layer="0" />
+    <line x1="0.4375" y1="-0.7875" x2="0.2625" y2="-0.7875" id="e615d885-f3b0-404d-a984-83905e8e6421" layer="0" />
+    <line x1="0.2625" y1="-0.7875" x2="0.2625" y2="-0.875" id="d94c22bc-f9e5-4f2d-a23b-a7ba4ba16c9b" layer="0" />
+    <line x1="0.28" y1="-0.6125" x2="0.28" y2="-0.7875" id="360e8990-2cc3-4352-bfee-a745bb071c6b" layer="0" />
+    <line x1="0.42" y1="-0.6125" x2="0.42" y2="-0.7875" id="c761fa1f-3ea8-43ec-aae6-744855803c5b" layer="0" />
+    <line x1="0.35" y1="-0.875" x2="0.35" y2="-1.05" id="0a8c6fa0-ae58-4f8f-9a62-dfdc912fea5b" layer="0" />
+    <line x1="0.7" y1="0.0" x2="0.7" y2="-0.175" id="43392e87-47cf-4b0e-bdc5-71e2531e8cc9" layer="0" />
+    <line x1="0.7" y1="-0.175" x2="0.7875" y2="-0.35" id="c04ad563-a12b-463f-b1d8-b1567142efd2" layer="0" />
+    <line x1="0.7" y1="-0.35" x2="0.7" y2="-0.525" id="5fa42c75-c02a-465c-a154-6bc97f8d1a0a" layer="0" />
+    <line x1="0.6125" y1="-0.6125" x2="0.7875" y2="-0.6125" id="0e267619-22c5-4834-ae64-ffc79b23300e" layer="0" />
+    <line x1="0.7875" y1="-0.6125" x2="0.7875" y2="-0.525" id="10c15846-db2e-4b0a-96d4-e58ce8ad4729" layer="0" />
+    <line x1="0.7875" y1="-0.525" x2="0.6125" y2="-0.525" id="a727c417-5945-4767-9709-4ca61b8e4b62" layer="0" />
+    <line x1="0.6125" y1="-0.525" x2="0.6125" y2="-0.6125" id="33af010e-ec54-4447-ba96-92371ffdad80" layer="0" />
+    <line x1="0.6125" y1="-0.875" x2="0.7875" y2="-0.875" id="3add50ad-5bd1-4655-8ddf-1b80bf46f2e0" layer="0" />
+    <line x1="0.7875" y1="-0.875" x2="0.7875" y2="-0.7875" id="9793f9d0-5d46-470a-854d-ec1c7402b825" layer="0" />
+    <line x1="0.7875" y1="-0.7875" x2="0.6125" y2="-0.7875" id="a251a31a-c299-4750-ac95-d455ac5fe869" layer="0" />
+    <line x1="0.6125" y1="-0.7875" x2="0.6125" y2="-0.875" id="0515ef81-af17-49d6-9dbb-7e41d44c608e" layer="0" />
+    <line x1="0.63" y1="-0.6125" x2="0.63" y2="-0.7875" id="bde7822c-cc01-48cd-95f6-0e95d572d461" layer="0" />
+    <line x1="0.77" y1="-0.6125" x2="0.77" y2="-0.7875" id="d08b45c5-cae4-44cd-9d9f-e514217f2a4e" layer="0" />
+    <line x1="0.7" y1="-0.875" x2="0.7" y2="-1.05" id="e6368040-93a1-47d5-affe-11941774a13d" layer="0" />
+    <line x1="0.04375" y1="-0.2625" x2="0.74375" y2="-0.2625" id="381b2338-3168-413d-851e-fd1c1d9c039e" layer="Dashed" />
+    <line x1="0.74375" y1="-0.2625" x2="1.05" y2="-0.2625" id="30d3eb23-8d81-4f07-aa5c-1aa1a5ac76b6" layer="0" />
+    <line x1="1.05" y1="-0.2625" x2="1.225" y2="-0.525" id="eff2591d-6270-4adf-9a99-50f35d855176" layer="0" />
+    <text x="1.3250000000000002" y="-0.05" height="0.1" rotation="0.0" id="115c4c8f-e66d-41dd-8e4c-9bf4f6efd837" align="left" tstyle="Default" rich="0" layer="0">
+      <source>{description}</source>
+    </text>
+    <text x="1.3250000000000002" y="-0.21000000000000002" height="0.1" rotation="0.0" id="06751c3a-148b-46a7-aba8-9c8eb836d8f4" align="left" tstyle="Default" rich="0" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="1.3250000000000002" y="-0.37" height="0.1" rotation="0.0" id="5d2ec961-1744-44b0-b70e-77e1b89d5efa" align="left" tstyle="Default" rich="0" layer="0">
+      <source>{tag}</source>
+    </text>
+  </entities>
+  <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="2" x="0.0" y="-1.05" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="3" x="0.35" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="4" x="0.35" y="-1.05" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="5" x="0.7" y="0.0" num_dx="0.0" num_dy="0.0" />
+  <slot terminal="6" x="0.7" y="-1.05" num_dx="0.0" num_dy="0.0" />
+</block>

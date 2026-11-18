@@ -323,7 +323,8 @@ def block_from_sheet(old: m.BlockDef, sheet: m.Sheet) -> m.BlockDef:
     new = make_block(old.name, list(sheet.entities), EDIT_ORIGIN, label_lines_of(old), old.label_pos,
                      description=old.description, part_number=old.part_number, manufacturer=old.manufacturer,
                      hyperlink=old.hyperlink, tag_prefix=old.tag_prefix, increment=old.increment,
-                     prefix_rule=old.prefix_rule, connector=old.connector, exclude_bom=old.exclude_bom, folder=old.folder, data=dict(old.data),
+                     prefix_rule=old.prefix_rule, connector=old.connector, exclude_bom=old.exclude_bom,
+                     fp_w=old.fp_w, fp_h=old.fp_h, fp_d=old.fp_d, mount=old.mount, rail_cl=old.rail_cl, folder=old.folder, data=dict(old.data),
                      poles=old.poles if same else None)
     for n, o in zip(new.slots, old.slots):                       # keep where the wire number prints
         n.num_dx, n.num_dy = o.num_dx, o.num_dy

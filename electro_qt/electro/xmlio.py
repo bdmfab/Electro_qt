@@ -104,6 +104,12 @@ def sheet_to_xml(s: m.Sheet) -> ET.Element:
         root.set("col_split_x", _fmt(s.col_split_x))
     if s.cover:
         root.set("cover", "1")
+    if s.panel:
+        root.set("panel", "1")
+    if abs(s.dim_th - 0.14) > 1e-9:
+        root.set("dim_th", repr(s.dim_th))
+    if s.dim_units != "in":
+        root.set("dim_units", s.dim_units)
     if s.logo_box:
         root.set("logo_box", ",".join(repr(float(v)) for v in s.logo_box))
     for i, t in enumerate(s.title_lines):
@@ -135,6 +141,9 @@ def sheet_from_xml(root: ET.Element) -> m.Sheet:
                 col_split_x=float(root.get("col_split_x")) if root.get("col_split_x") else None,
                 logo_box=tuple(float(v) for v in root.get("logo_box").split(",")) if root.get("logo_box") else None)
     s.cover = root.get("cover") == "1"
+    s.panel = root.get("panel") == "1"
+    s.dim_units = root.get("dim_units", "in")
+    s.dim_th = float(root.get("dim_th", "0.14"))
     lines = {int(t.get("n")): t.get("text", "") for t in root.findall("title_line")}
     s.title_lines = [lines.get(i, "") for i in range(1, 5)]
     fr = root.find("frame")
@@ -171,7 +180,8 @@ def block_to_xml(b: m.BlockDef) -> ET.Element:
     el = ET.Element("block", name=b.name, description=b.description,
                     part_number=b.part_number, tag_prefix=b.tag_prefix,
                     hyperlink=b.hyperlink, manufacturer=b.manufacturer,
-                    increment=str(b.increment), connector=str(b.connector), exclude_bom=str(b.exclude_bom), prefix_rule=b.prefix_rule,
+                    increment=str(b.increment), connector=str(b.connector), exclude_bom=str(b.exclude_bom),
+                    fp_w=_fmt(b.fp_w), fp_h=_fmt(b.fp_h), fp_d=_fmt(b.fp_d), mount=b.mount, rail_cl=_fmt(b.rail_cl), prefix_rule=b.prefix_rule,
                     poles=str(b.poles), label_pos=b.label_pos, folder=b.folder,
                     terminal_text_editable=_fmt(b.terminal_text_editable))
     for k, v in b.data.items():
@@ -192,6 +202,8 @@ def block_from_xml(el: ET.Element) -> m.BlockDef:
                    el.get("part_number", ""), el.get("tag_prefix", ""),
                    el.get("hyperlink", ""), el.get("manufacturer", ""),
                    increment=int(el.get("increment", "0")), connector=int(el.get("connector", "0")), exclude_bom=int(el.get("exclude_bom", "0")),
+                   fp_w=float(el.get("fp_w", "0")), fp_h=float(el.get("fp_h", "0")), fp_d=float(el.get("fp_d", "0")),
+                   mount=el.get("mount", ""), rail_cl=float(el.get("rail_cl", "0")),
                    prefix_rule=el.get("prefix_rule", ""),
                    poles=int(el.get("poles", "1")), label_pos=el.get("label_pos", "right"), folder=el.get("folder", ""),
                    terminal_text_editable=el.get("terminal_text_editable") == "1")
