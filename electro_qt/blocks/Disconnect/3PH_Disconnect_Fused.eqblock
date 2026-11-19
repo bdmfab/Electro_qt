@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<block name="3PH_Disconnect_Fused" description="DESC" part_number="37105003" tag_prefix="DS" hyperlink="" manufacturer="Automation Direct" increment="1" connector="0" exclude_bom="0" fp_w="3.68" fp_h="4.57" fp_d="3.29" mount="plate" rail_cl="0.0" prefix_rule="" poles="3" label_pos="right" folder="Disconnect" terminal_text_editable="0">
+<block name="3PH_Disconnect_Fused" description="DESC" part_number="37105003" tag_prefix="DS" hyperlink="" manufacturer="Automation Direct" increment="0" connector="0" exclude_bom="False" fp_w="3.68" fp_h="4.57" fp_d="3.29" mount="plate" rail_cl="0.0" prefix_rule="" poles="3" label_pos="right" folder="Disconnect" terminal_text_editable="0">
   <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <blocklayer name="Dashed" color="7" kind="graphics" numbered="0" scheme="" linetype="dashed" lineweight="0.0" phase="" />
   <entities>
@@ -48,13 +48,13 @@
     <line x1="0.04375" y1="-0.2625" x2="0.74375" y2="-0.2625" id="381b2338-3168-413d-851e-fd1c1d9c039e" layer="Dashed" />
     <line x1="0.74375" y1="-0.2625" x2="1.05" y2="-0.2625" id="30d3eb23-8d81-4f07-aa5c-1aa1a5ac76b6" layer="0" />
     <line x1="1.05" y1="-0.2625" x2="1.225" y2="-0.525" id="eff2591d-6270-4adf-9a99-50f35d855176" layer="0" />
-    <text x="1.3250000000000002" y="-0.05" height="0.1" rotation="0.0" id="115c4c8f-e66d-41dd-8e4c-9bf4f6efd837" align="left" tstyle="Default" rich="0" layer="0">
+    <text x="1.3250000000000002" y="-0.05" height="0.1" rotation="0.0" id="93fce266-9b1f-43f3-83bc-bc27a01fb974" align="left" tstyle="Default" rich="0" layer="0">
       <source>{description}</source>
     </text>
-    <text x="1.3250000000000002" y="-0.21000000000000002" height="0.1" rotation="0.0" id="06751c3a-148b-46a7-aba8-9c8eb836d8f4" align="left" tstyle="Default" rich="0" layer="0">
+    <text x="1.3250000000000002" y="-0.21000000000000002" height="0.1" rotation="0.0" id="9b6bebfb-0e72-426c-95c1-3815498b331f" align="left" tstyle="Default" rich="0" layer="0">
       <source>{part_label}</source>
     </text>
-    <text x="1.3250000000000002" y="-0.37" height="0.1" rotation="0.0" id="5d2ec961-1744-44b0-b70e-77e1b89d5efa" align="left" tstyle="Default" rich="0" layer="0">
+    <text x="1.3250000000000002" y="-0.37" height="0.1" rotation="0.0" id="612627b4-4668-4413-ad7a-9f49836db77c" align="left" tstyle="Default" rich="0" layer="0">
       <source>{tag}</source>
     </text>
   </entities>

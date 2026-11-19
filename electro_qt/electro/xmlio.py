@@ -180,7 +180,7 @@ def block_to_xml(b: m.BlockDef) -> ET.Element:
     el = ET.Element("block", name=b.name, description=b.description,
                     part_number=b.part_number, tag_prefix=b.tag_prefix,
                     hyperlink=b.hyperlink, manufacturer=b.manufacturer,
-                    increment=str(b.increment), connector=str(b.connector), exclude_bom=str(b.exclude_bom),
+                    increment=str(b.increment), connector=str(b.connector), exclude_bom=str(int(bool(b.exclude_bom))),
                     fp_w=_fmt(b.fp_w), fp_h=_fmt(b.fp_h), fp_d=_fmt(b.fp_d), mount=b.mount, rail_cl=_fmt(b.rail_cl), prefix_rule=b.prefix_rule,
                     poles=str(b.poles), label_pos=b.label_pos, folder=b.folder,
                     terminal_text_editable=_fmt(b.terminal_text_editable))
@@ -201,7 +201,7 @@ def block_from_xml(el: ET.Element) -> m.BlockDef:
     b = m.BlockDef(el.get("name"), el.get("description", ""),
                    el.get("part_number", ""), el.get("tag_prefix", ""),
                    el.get("hyperlink", ""), el.get("manufacturer", ""),
-                   increment=int(el.get("increment", "0")), connector=int(el.get("connector", "0")), exclude_bom=int(el.get("exclude_bom", "0")),
+                   increment=int(el.get("increment", "0")), connector=int(el.get("connector", "0")), exclude_bom=int(el.get("exclude_bom", "0") not in ("0", "False", "false", "")),
                    fp_w=float(el.get("fp_w", "0")), fp_h=float(el.get("fp_h", "0")), fp_d=float(el.get("fp_d", "0")),
                    mount=el.get("mount", ""), rail_cl=float(el.get("rail_cl", "0")),
                    prefix_rule=el.get("prefix_rule", ""),

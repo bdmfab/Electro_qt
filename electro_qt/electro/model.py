@@ -156,6 +156,8 @@ class Dim:
     orient: str = "h"             # h | v
     pos: float = 0.0
     th: float = 0.0               # text height, inches (0 = the sheet's default)
+    a1: str = ""                  # what the first / second end is attached to: "<panel object id>:<x0|xc|x1|y0|yc|y1>"
+    a2: str = ""                  # (edge or centre of the object; "" = a free point). Attached ends follow their object
     style: Style = field(default_factory=Style)
     id: str = field(default_factory=new_id)
     TAG = "dim"
@@ -358,7 +360,8 @@ class Project:
         """Give the numbered sheets (a list of their current pages, in the wanted order) the pages 01, 02, 03 ...
         The cover stays 00. Goto targets follow. -> {old page: new page} for the sheets that changed."""
         mapping = {pg: pg for pg, sh in self.sheets.items() if sh.cover}
-        for i, pg in enumerate(order, 1):
+        order = [pg for pg in order if not self.sheets[pg].panel] + [pg for pg in order if self.sheets[pg].panel]
+        for i, pg in enumerate(order, 1):                 # panel layouts always come last
             mapping[pg] = i
         changed = {a: b for a, b in mapping.items() if a != b}
         if changed:
@@ -387,6 +390,18 @@ class Project:
         order.remove(page)
         order.insert(max(0, min(new_page - 1, len(order))), page)
         return self._apply_order(order)
+
+    def add_sheet_before_panels(self, sheet: Sheet) -> int:
+        """Add a numbered sheet after the last ordinary sheet; the panel layouts (always last) move up one page.
+        -> the new sheet's page."""
+        tmp = 10_000
+        sheet.page = tmp
+        self.sheets[tmp] = sheet
+        order = [pg for pg in sorted(self.sheets) if pg != tmp and not self.sheets[pg].cover]
+        k = next((i for i, pg in enumerate(order) if self.sheets[pg].panel), len(order))
+        order.insert(k, tmp)
+        self._apply_order(order)
+        return sheet.page
 
     def add_sheet(self, sheet: Sheet) -> Sheet:
         if sheet.page in self.sheets:

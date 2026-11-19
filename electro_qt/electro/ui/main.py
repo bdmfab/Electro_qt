@@ -87,6 +87,8 @@ class MainWindow(QMainWindow):
         self._build_ui()
         for pg in sorted(self.project.sheets):
             self._add_tab(self.project.sheets[pg])
+        for key in self._reference_keys():                      # reference PDFs stored in the project
+            self._open_ref_tab(key, select=False)
         self.tabs.setTabsClosable(True)              # only block-editing tabs keep their close button
         self.tabs.tabCloseRequested.connect(self._close_tab)
         self._tab_buttons()
@@ -234,6 +236,7 @@ class MainWindow(QMainWindow):
         fm.addAction(self._act("&New", self.on_new, S.New))
         fm.addAction(self._act("&Open...", self.on_open, S.Open))
         fm.addAction(self._act("Open &DXF (scratch tab)...", self.on_open_dxf))
+        fm.addAction(self._act("Open &reference PDF (tab, kept in the project)...", self.on_open_reference_pdf))
         fm.addAction(self._act("&Save", self.on_save, S.Save))
         fm.addAction(self._act("Save &As...", self.on_save_as, S.SaveAs))
         fm.addSeparator()
@@ -698,6 +701,42 @@ class MainWindow(QMainWindow):
         if notes:
             QMessageBox.information(self, "Open DXF", f"{msg}.\n\nNot brought across as-is:\n  " + "\n  ".join(notes))
 
+    # ------------------------------------------------------------ reference PDFs
+    def _reference_keys(self):
+        return sorted(k for k in self.project.assets if k.startswith("ref/") and k.lower().endswith(".pdf"))
+
+    def _open_ref_tab(self, key, select=True):
+        from . import pdftab
+        base = key[len("ref/"):]
+        i = self._add_tab(m.Sheet(0, base))                 # an empty drawing view under the viewer
+        v = self.tabs.widget(i)
+        v.scene().block_edit = {"pdf": key}
+        self.tabs.setTabText(i, f"PDF: {base}")
+        if not pdftab.attach(v, self.project.assets[key]):
+            QMessageBox.information(self, "Reference PDF", "The PDF viewer is not installed here "
+                                    "(pip install PySide6-Addons). The PDF is kept in the project and still goes into "
+                                    "the PDF export.")
+        self._tab_buttons()
+        if select:
+            self.tabs.setCurrentIndex(i)
+
+    def on_open_reference_pdf(self):
+        paths, _ = QFileDialog.getOpenFileNames(self, "Open reference PDF", "", "PDF (*.pdf)")
+        for path in paths:
+            try:
+                with open(path, "rb") as f:
+                    data = f.read()
+            except OSError as ex:
+                QMessageBox.warning(self, "Reference PDF", f"Could not read {path}:\n{ex}"); continue
+            stem, ext = os.path.splitext(os.path.basename(path))
+            key, n = f"ref/{stem}{ext}", 2
+            while key in self.project.assets:
+                key, n = f"ref/{stem} ({n}){ext}", n + 1
+            self.project.assets[key] = data
+            self._open_ref_tab(key)
+            self._extra_dirty = True
+        self._title()
+
     def on_apply_block_edit(self, sc=None):
         import copy
         sc = sc or self.scene_
@@ -726,6 +765,19 @@ class MainWindow(QMainWindow):
         sc = self.tabs.widget(i).scene()
         if not sc.block_edit:
             self.statusBar().showMessage("Only block-edit tabs can be closed.", 4000)
+            return
+        if "pdf" in sc.block_edit:                   # a reference PDF: closing removes it from the project
+            key = sc.block_edit["pdf"]
+            if QMessageBox.question(self, "Reference PDF", f"Remove {key[len('ref/'):]} from the project?\n"
+                                    "It is deleted from the project file and no longer goes into the PDF export."
+                                    ) != QMessageBox.StandardButton.Yes:
+                return
+            self.project.assets.pop(key, None)
+            self._extra_dirty = True
+            self.props.attach(None)
+            self.undo_group.removeStack(sc.undo)
+            self.tabs.removeTab(i)
+            self._title()
             return
         if "dxf" in sc.block_edit:                   # a scratch tab: nothing to save back
             if not sc.undo.isClean() and QMessageBox.question(
@@ -1068,10 +1120,20 @@ class MainWindow(QMainWindow):
             for sh in sheets:
                 path = os.path.join(folder, exportnames.sheet_stem(sh) + ".pdf")
                 write_pdf(path, self.project, [sh], exportnames.tab_label(sh)); written.append(path)
-            if every and len(sheets) > 1:
+            refs = self._reference_keys() if every else []
+            note = ""
+            if every and (len(sheets) > 1 or refs):
                 job = exportnames.job_stem(self.project, self.path)
                 path = os.path.join(folder, job + ".pdf")
                 write_pdf(path, self.project, sheets, job); written.append(path)
+                if refs:                                    # reference PDFs follow the drawings in the job file
+                    from .. import pdfmerge
+                    if not pdfmerge.available():
+                        note = " The reference PDFs were left out: pip install pypdf to add them."
+                    else:
+                        bad = pdfmerge.append_pdfs(path, [self.project.assets[k] for k in refs])
+                        note = f" Reference PDFs added: {len(refs) - len(bad)}." + \
+                               (f" Could not read: {', '.join(refs[i][4:] for i in bad)}." if bad else "")
         except Exception as e:                           # noqa: BLE001
             import traceback
             box = QMessageBox(QMessageBox.Icon.Warning, "PDF export", f"Could not write the PDF:\n{type(e).__name__}: {e}", parent=self)
@@ -1081,7 +1143,7 @@ class MainWindow(QMainWindow):
         from .resultdlg import ExportResultDialog
         n = len(sheets)
         ExportResultDialog(self, "PDF export", written, f"PDF: {len(written)} file(s) written ({n} sheet file(s)" +
-                           (", plus the merged job file)." if every and n > 1 else ").")).exec()
+                           (", plus the merged job file)." if every and (n > 1 or refs) else ").") + note).exec()
 
     def on_letter_rules(self):
         from .ruledlg import RulesDialog
@@ -1293,10 +1355,14 @@ class MainWindow(QMainWindow):
         page = max(self.project.sheets, default=0) + 1
         if page > 99:
             QMessageBox.warning(self, "Add sheet", "A project holds at most 99 sheets."); return
-        sheet = sheet_from_template(self.project.templates[name], page, f"Sheet {page}")
-        self.project.add_sheet(sheet)
-        i = self._add_tab(sheet)
+        sheet = sheet_from_template(self.project.templates[name], page, "")
+        page = self.project.add_sheet_before_panels(sheet)          # panel layouts stay last
+        sheet.title = f"Sheet {page}"
+        first_panel = next((i for i in range(self.tabs.count()) if self.tabs.widget(i).scene().sheet.panel
+                            and not self.tabs.widget(i).scene().block_edit), None)
+        i = self._add_tab(sheet, first_panel)
         self.tabs.setCurrentIndex(i)
+        self._retitle_tabs()
         self._refresh_all()                        # "01 OF 02" etc. on every sheet
         self._extra_dirty = True
         self._title()

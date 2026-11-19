@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<block name="A6_RS" description="DESC" part_number="A6-xxxRS" tag_prefix="SD" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" fp_w="1.58" fp_h="6.7" fp_d="5.91" mount="plate" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="Servo/Stepper Online" terminal_text_editable="0">
+<block name="A6_RS" description="DESC" part_number="A6-xxxRS" tag_prefix="SD" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" fp_w="1.58" fp_h="6.7" fp_d="5.91" mount="" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="Servo/Stepper Online" terminal_text_editable="0">
   <blocklayer name="Visible" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <blocklayer name="TANGENT_LINES" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
@@ -2731,13 +2731,13 @@
     <line x1="3.8" y1="-2.15" x2="4.2" y2="-7.35" id="bceae74e-c776-49b8-9acd-ed0623203deb" layer="0" />
     <line x1="2.1" y1="-2.45" x2="2.215929652" y2="-2.618110236" id="87732e55-42ee-4d68-a72e-567a91f079e1" layer="0" />
     <line x1="2.1" y1="-2.8" x2="2.219162997" y2="-2.716535433" id="455dcffa-c739-4414-b65b-f03a8dd2cde3" layer="0" />
-    <text x="2.45" y="0.1" height="0.1" rotation="0.0" id="b8a8a9ba-2714-4a71-b8b1-e8f409093078" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="2.45" y="0.1" height="0.1" rotation="0.0" id="79b9c049-2c3a-4fda-a06d-6622fef3bb66" align="center" tstyle="Default" rich="0" layer="0">
       <source>{tag}</source>
     </text>
-    <text x="2.45" y="0.26" height="0.1" rotation="0.0" id="da1a418a-853b-4437-b005-67e1b5c1d533" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="2.45" y="0.26" height="0.1" rotation="0.0" id="16b9113d-4fc0-420a-8643-296493477d89" align="center" tstyle="Default" rich="0" layer="0">
       <source>{part_label}</source>
     </text>
-    <text x="2.45" y="0.42000000000000004" height="0.1" rotation="0.0" id="ace87e10-d603-4529-92c4-59390211a39f" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="2.45" y="0.42000000000000004" height="0.1" rotation="0.0" id="9721b4a7-4661-4e7f-948a-1a783f4fd46b" align="center" tstyle="Default" rich="0" layer="0">
       <source>{description}</source>
     </text>
   </entities>

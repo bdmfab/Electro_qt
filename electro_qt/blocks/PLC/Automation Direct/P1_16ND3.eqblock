@@ -1,0 +1,299 @@
+<?xml version='1.0' encoding='utf-8'?>
+<block name="P1_16ND3" description="16 Pt DC Input" part_number="P1-16ND3" tag_prefix="IN" hyperlink="" manufacturer="Automation Direct" increment="0" connector="0" exclude_bom="False" fp_w="0.68" fp_h="3.69" fp_d="3.22" mount="rail" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="PLC/Automation Direct" terminal_text_editable="0">
+  <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
+  <entities>
+    <line x1="0.0" y1="0.0" x2="0.0875" y2="0.0" id="8aa8247d-1a95-47fe-8c41-ac138ba80227" layer="0" />
+    <line x1="0.175" y1="-0.0875" x2="0.525" y2="-0.0875" id="7220ad5f-3305-40cd-ab00-84c8cb9c29ea" layer="0" color="8" />
+    <line x1="0.525" y1="-0.0875" x2="0.525" y2="0.0875" id="5e96ff85-551f-4c52-952d-5bdc170f9a8e" layer="0" color="8" />
+    <line x1="0.525" y1="0.0875" x2="0.175" y2="0.0875" id="e6584e04-7e42-40ec-a53d-2d742dcad1eb" layer="0" color="8" />
+    <line x1="0.175" y1="0.0875" x2="0.175" y2="-0.0875" id="257c544b-4bde-41d0-bde1-06d6bfed0dde" layer="0" color="8" />
+    <line x1="0.35" y1="0.0875" x2="0.35" y2="-0.0875" id="b4308552-3ea8-4669-99d1-bcfdf7c68e9c" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="0.0" r="0.051695936277052455" id="edee015b-a7d7-4aac-9270-398d21cb1315" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-0.036554547" x2="0.474054547" y2="0.036554547" id="a63bc725-986c-4f3f-86bd-2063c90ce84d" layer="0" color="8" />
+    <line x1="0.202125298" y1="-0.061547928" x2="0.323191718" y2="-0.061547928" id="32320f43-fd1e-4c2b-9663-f796b4ad3869" layer="0" color="8" />
+    <line x1="0.323191718" y1="-0.061547928" x2="0.323191718" y2="0.057860047" id="55b7393c-5f34-48da-a7a6-fd41fa9b5e10" layer="0" color="8" />
+    <line x1="0.323191718" y1="0.057860047" x2="0.202125298" y2="0.057860047" id="17165cd4-212d-4aa9-9728-439600dd7fee" layer="0" color="8" />
+    <line x1="0.202125298" y1="0.057860047" x2="0.202125298" y2="-0.061547928" id="954fa0c8-b067-4e60-9eda-6c92df6d9894" layer="0" color="8" />
+    <text x="0.5461622358459826" y="-0.053070211323216654" resolved="&lt;size=0.833&gt;C1&lt;/size&gt;" height="0.12" rotation="0.0" id="7254e284-590f-423d-afab-0f0205a3cff0" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;C1&lt;/size&gt;</source>
+    </text>
+    <line x1="0.0" y1="-0.35" x2="0.0875" y2="-0.35" id="c9cd4812-35f4-4205-9a0b-13e122917ba6" layer="0" />
+    <line x1="0.175" y1="-0.4375" x2="0.525" y2="-0.4375" id="9dea0585-ca4c-4384-97f4-d76eb72923d1" layer="0" color="8" />
+    <line x1="0.525" y1="-0.4375" x2="0.525" y2="-0.2625" id="411d2c5d-33e9-4f8e-b97f-faa5f2008508" layer="0" color="8" />
+    <line x1="0.525" y1="-0.2625" x2="0.175" y2="-0.2625" id="c43e1328-9ff4-44b7-91ad-ca272f467e93" layer="0" color="8" />
+    <line x1="0.175" y1="-0.2625" x2="0.175" y2="-0.4375" id="bf4a7778-8960-46b6-9f00-e3a7a93e46aa" layer="0" color="8" />
+    <line x1="0.35" y1="-0.2625" x2="0.35" y2="-0.4375" id="3aac7dd7-cd67-4ec7-98bd-d6c804ec1a8f" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-0.3500000000000014" r="0.051695936277052455" id="82fbf437-ae0b-4c29-bc8a-93509e193907" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-0.386554547" x2="0.474054547" y2="-0.313445453" id="b7cdee09-22e4-449c-8f3d-b30459984924" layer="0" color="8" />
+    <line x1="0.202125298" y1="-0.411547928" x2="0.323191718" y2="-0.411547928" id="908a70c7-0025-46e7-bf73-15c6da69de12" layer="0" color="8" />
+    <line x1="0.323191718" y1="-0.411547928" x2="0.323191718" y2="-0.292139953" id="2386ab65-f068-4aea-935c-6970e08e491a" layer="0" color="8" />
+    <line x1="0.323191718" y1="-0.292139953" x2="0.202125298" y2="-0.292139953" id="b9a11240-f17e-4d10-81d8-5de3e4b33314" layer="0" color="8" />
+    <line x1="0.202125298" y1="-0.292139953" x2="0.202125298" y2="-0.411547928" id="a7e49600-82e5-409e-a0a3-0a0c39ab3ad3" layer="0" color="8" />
+    <text x="0.5461622358459826" y="-0.4030702113232181" resolved="&lt;size=0.833&gt;1&lt;/size&gt;" height="0.12" rotation="0.0" id="ab941244-2080-4ee3-8b07-f12f5151b534" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;1&lt;/size&gt;</source>
+    </text>
+    <line x1="0.0" y1="-0.7" x2="0.0875" y2="-0.7" id="6d60a0d3-2c94-400c-8f1a-246923a4a045" layer="0" />
+    <line x1="0.175" y1="-0.7875" x2="0.525" y2="-0.7875" id="5077b99f-afd2-46de-af3b-455de8b79940" layer="0" color="8" />
+    <line x1="0.525" y1="-0.7875" x2="0.525" y2="-0.6125" id="28aaa5be-8ad8-4645-ad1a-e74a017678c1" layer="0" color="8" />
+    <line x1="0.525" y1="-0.6125" x2="0.175" y2="-0.6125" id="37ae706f-c0fa-46f0-9b86-fdf9b8c84d7a" layer="0" color="8" />
+    <line x1="0.175" y1="-0.6125" x2="0.175" y2="-0.7875" id="53aef057-ea63-4a28-8932-f622988b64e5" layer="0" color="8" />
+    <line x1="0.35" y1="-0.6125" x2="0.35" y2="-0.7875" id="f20b8688-73cb-45a3-885d-f926791f6b45" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-0.6999999999999993" r="0.051695936277052455" id="e79f1677-2d47-4ccd-90ac-ebb2b6100974" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-0.736554547" x2="0.474054547" y2="-0.663445453" id="93dfc953-1b9b-4a44-a829-f2c3e3c4cf18" layer="0" color="8" />
+    <line x1="0.202125298" y1="-0.761547928" x2="0.323191718" y2="-0.761547928" id="15022ae2-2268-4ebf-9f0b-d333aeed9803" layer="0" color="8" />
+    <line x1="0.323191718" y1="-0.761547928" x2="0.323191718" y2="-0.642139953" id="a92f7958-416a-4bf8-9f86-a2dbe6b47c55" layer="0" color="8" />
+    <line x1="0.323191718" y1="-0.642139953" x2="0.202125298" y2="-0.642139953" id="1d5e0967-0d8f-41be-8771-cc6765584fe7" layer="0" color="8" />
+    <line x1="0.202125298" y1="-0.642139953" x2="0.202125298" y2="-0.761547928" id="eed17b9f-b689-4bb2-9576-6ddeb1c55228" layer="0" color="8" />
+    <line x1="0.0" y1="-1.05" x2="0.0875" y2="-1.05" id="6ba3d3ad-1505-4810-b325-245e4e87ac46" layer="0" />
+    <line x1="0.175" y1="-1.1375" x2="0.525" y2="-1.1375" id="97b28f0c-1c8b-4da7-a7b9-2a414fe348d4" layer="0" color="8" />
+    <line x1="0.525" y1="-1.1375" x2="0.525" y2="-0.9625" id="341c9e1f-f8d5-4bfa-bd5e-6c7e50982973" layer="0" color="8" />
+    <line x1="0.525" y1="-0.9625" x2="0.175" y2="-0.9625" id="527ffeb6-dc03-4b1f-a7cf-a54d5854cdab" layer="0" color="8" />
+    <line x1="0.175" y1="-0.9625" x2="0.175" y2="-1.1375" id="bbbcd4b5-2e59-4a7b-a79c-4abc20b1b760" layer="0" color="8" />
+    <line x1="0.35" y1="-0.9625" x2="0.35" y2="-1.1375" id="db668759-6689-4340-adb9-b2f11d1cd728" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-1.0500000000000007" r="0.051695936277052455" id="623c5704-6b6f-486c-82f1-e488bded1da4" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-1.086554547" x2="0.474054547" y2="-1.013445453" id="d47eb0d2-0935-43e3-9164-084f10642ab6" layer="0" color="8" />
+    <line x1="0.202125298" y1="-1.111547928" x2="0.323191718" y2="-1.111547928" id="4f657688-237f-48d1-8cc9-c615489647f3" layer="0" color="8" />
+    <line x1="0.323191718" y1="-1.111547928" x2="0.323191718" y2="-0.992139953" id="0ca36a67-1fa4-427d-b7b1-c825d178af66" layer="0" color="8" />
+    <line x1="0.323191718" y1="-0.992139953" x2="0.202125298" y2="-0.992139953" id="b1d0f05d-8912-4c1b-9bff-290dc41887db" layer="0" color="8" />
+    <line x1="0.202125298" y1="-0.992139953" x2="0.202125298" y2="-1.111547928" id="0ebca505-dfac-49bd-b353-2dd71a1293d1" layer="0" color="8" />
+    <line x1="0.0" y1="-1.4" x2="0.0875" y2="-1.4" id="0e7a40a3-4010-4b5d-b392-6d772515aac4" layer="0" />
+    <line x1="0.175" y1="-1.4875" x2="0.525" y2="-1.4875" id="a8991c0c-0020-4338-8dff-01a55998b2ba" layer="0" color="8" />
+    <line x1="0.525" y1="-1.4875" x2="0.525" y2="-1.3125" id="c12616ec-db43-4473-825e-b73a647d5491" layer="0" color="8" />
+    <line x1="0.525" y1="-1.3125" x2="0.175" y2="-1.3125" id="4f91a31b-f98f-4f56-8e4b-7e8dce8b3915" layer="0" color="8" />
+    <line x1="0.175" y1="-1.3125" x2="0.175" y2="-1.4875" id="95e083b2-392b-4baa-bd49-f5d82feea0c9" layer="0" color="8" />
+    <line x1="0.35" y1="-1.3125" x2="0.35" y2="-1.4875" id="e46078e8-b214-49cc-b463-d2b7bcc8fa32" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-1.3999999999999986" r="0.051695936277052455" id="88eff577-cff6-4f2b-992e-207216310775" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-1.436554547" x2="0.474054547" y2="-1.363445453" id="eeb839dc-22be-45b4-b2c2-3b92b1d34eab" layer="0" color="8" />
+    <line x1="0.202125298" y1="-1.461547928" x2="0.323191718" y2="-1.461547928" id="50bb4004-87eb-4a52-9f04-33644c1ca373" layer="0" color="8" />
+    <line x1="0.323191718" y1="-1.461547928" x2="0.323191718" y2="-1.342139953" id="255ea4fd-6758-4934-9b5a-209683a78e31" layer="0" color="8" />
+    <line x1="0.323191718" y1="-1.342139953" x2="0.202125298" y2="-1.342139953" id="5cada018-58bd-4754-ab62-106c5da69403" layer="0" color="8" />
+    <line x1="0.202125298" y1="-1.342139953" x2="0.202125298" y2="-1.461547928" id="bbfdc973-56dd-4d36-a369-7b0f01e1ba46" layer="0" color="8" />
+    <line x1="0.0" y1="-1.75" x2="0.0875" y2="-1.75" id="2a629284-150a-466d-80b1-c508174b5d29" layer="0" />
+    <line x1="0.175" y1="-1.8375" x2="0.525" y2="-1.8375" id="daa4fe1d-9261-4079-9421-7e91bb98c3fc" layer="0" color="8" />
+    <line x1="0.525" y1="-1.8375" x2="0.525" y2="-1.6625" id="465dfef7-59b5-4cde-8b18-e022c5aa6941" layer="0" color="8" />
+    <line x1="0.525" y1="-1.6625" x2="0.175" y2="-1.6625" id="20b5b1ef-b1c3-4754-9056-ced4e3363926" layer="0" color="8" />
+    <line x1="0.175" y1="-1.6625" x2="0.175" y2="-1.8375" id="a356ebbf-7903-4a20-907f-35717ef0b9a0" layer="0" color="8" />
+    <line x1="0.35" y1="-1.6625" x2="0.35" y2="-1.8375" id="18edbde7-2ae9-4a50-b6aa-cad91406c368" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-1.75" r="0.051695936277052455" id="2e68deea-4f83-4dd3-90f5-ac1655c6323c" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-1.786554547" x2="0.474054547" y2="-1.713445453" id="3287ea55-b8c9-4b71-bc70-df5334abeb07" layer="0" color="8" />
+    <line x1="0.202125298" y1="-1.811547928" x2="0.323191718" y2="-1.811547928" id="ad7424e3-3204-4cfb-bbb1-3cbbaa792fc6" layer="0" color="8" />
+    <line x1="0.323191718" y1="-1.811547928" x2="0.323191718" y2="-1.692139953" id="c02086be-85c5-4922-bbd7-e9f5e08589f3" layer="0" color="8" />
+    <line x1="0.323191718" y1="-1.692139953" x2="0.202125298" y2="-1.692139953" id="ec7e8c35-f928-47d0-8177-3ad8a7f13b09" layer="0" color="8" />
+    <line x1="0.202125298" y1="-1.692139953" x2="0.202125298" y2="-1.811547928" id="46747ec4-a5ae-4b94-919b-ea3e10baa25c" layer="0" color="8" />
+    <line x1="0.0" y1="-2.1" x2="0.0875" y2="-2.1" id="17373e83-0c56-4664-bc2b-caff638c984f" layer="0" />
+    <line x1="0.175" y1="-2.1875" x2="0.525" y2="-2.1875" id="9b76a442-3ef5-420c-8d6a-f602879c7d7d" layer="0" color="8" />
+    <line x1="0.525" y1="-2.1875" x2="0.525" y2="-2.0125" id="7d4e30f7-572e-4db0-8656-41a3689c079d" layer="0" color="8" />
+    <line x1="0.525" y1="-2.0125" x2="0.175" y2="-2.0125" id="31da018d-0d6b-4914-a90b-813a0a5e7f61" layer="0" color="8" />
+    <line x1="0.175" y1="-2.0125" x2="0.175" y2="-2.1875" id="4214bdc3-94b8-45db-8f4b-8a998b9baf1b" layer="0" color="8" />
+    <line x1="0.35" y1="-2.0125" x2="0.35" y2="-2.1875" id="44631bc8-e42e-4138-94bc-880f83259bd4" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-2.0999999999999996" r="0.051695936277052455" id="fcad7e76-89d4-4d95-9ecb-b74a9d37ad85" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-2.136554547" x2="0.474054547" y2="-2.063445453" id="6d772043-7ece-4068-8724-aeecf3ed3a24" layer="0" color="8" />
+    <line x1="0.202125298" y1="-2.161547928" x2="0.323191718" y2="-2.161547928" id="79440200-27f8-44df-a62a-2db191ecc537" layer="0" color="8" />
+    <line x1="0.323191718" y1="-2.161547928" x2="0.323191718" y2="-2.042139953" id="84901d56-40ae-4b92-85b0-d948628a2d6a" layer="0" color="8" />
+    <line x1="0.323191718" y1="-2.042139953" x2="0.202125298" y2="-2.042139953" id="55436ae9-c86a-455e-9c0a-d8e71f26fe0c" layer="0" color="8" />
+    <line x1="0.202125298" y1="-2.042139953" x2="0.202125298" y2="-2.161547928" id="4fcbd208-654f-4554-85d1-4c41dc50a7b7" layer="0" color="8" />
+    <line x1="0.0" y1="-2.45" x2="0.0875" y2="-2.45" id="0c5d006f-d2d4-4ded-8f2e-6da8684480e7" layer="0" />
+    <line x1="0.175" y1="-2.5375" x2="0.525" y2="-2.5375" id="69a6843d-23d0-469b-b054-e1c1ca89d623" layer="0" color="8" />
+    <line x1="0.525" y1="-2.5375" x2="0.525" y2="-2.3625" id="2934bac3-8844-4112-9806-07f01d4be9a5" layer="0" color="8" />
+    <line x1="0.525" y1="-2.3625" x2="0.175" y2="-2.3625" id="d15d9b32-ca06-48e2-a5ec-f34282ea1be6" layer="0" color="8" />
+    <line x1="0.175" y1="-2.3625" x2="0.175" y2="-2.5375" id="5a7d4068-0525-4be1-98b9-f1502ce3d6a3" layer="0" color="8" />
+    <line x1="0.35" y1="-2.3625" x2="0.35" y2="-2.5375" id="3a906ee1-b4af-4e8e-98e1-7f996f5438ca" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-2.45" r="0.051695936277052455" id="f43208ee-53fc-4993-aae1-4883e6ffbec8" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-2.486554547" x2="0.474054547" y2="-2.413445453" id="e872c87c-d7f0-4df1-81ec-396b00f6427a" layer="0" color="8" />
+    <line x1="0.202125298" y1="-2.511547928" x2="0.323191718" y2="-2.511547928" id="8fa85ed5-8130-4e79-a562-ad5e8b6cf491" layer="0" color="8" />
+    <line x1="0.323191718" y1="-2.511547928" x2="0.323191718" y2="-2.392139953" id="fdfdef17-0212-446c-8cf5-a668a8e312b0" layer="0" color="8" />
+    <line x1="0.323191718" y1="-2.392139953" x2="0.202125298" y2="-2.392139953" id="f7cc798c-f473-4d4b-9ab5-e28c3096b1dc" layer="0" color="8" />
+    <line x1="0.202125298" y1="-2.392139953" x2="0.202125298" y2="-2.511547928" id="2e1320e6-6af7-422a-8b90-2f8fa88a16fa" layer="0" color="8" />
+    <line x1="0.0" y1="-2.8" x2="0.0875" y2="-2.8" id="272d179e-919d-4ce1-bc52-95c78b0d0eef" layer="0" />
+    <line x1="0.175" y1="-2.8875" x2="0.525" y2="-2.8875" id="4d975fcc-b8fd-4b29-87bd-7fe294f0fa24" layer="0" color="8" />
+    <line x1="0.525" y1="-2.8875" x2="0.525" y2="-2.7125" id="c50f321c-13e1-4f1c-90b6-0f86867b923f" layer="0" color="8" />
+    <line x1="0.525" y1="-2.7125" x2="0.175" y2="-2.7125" id="7fa94837-c788-48b5-82bf-00794621b1d2" layer="0" color="8" />
+    <line x1="0.175" y1="-2.7125" x2="0.175" y2="-2.8875" id="ebf1b28a-1096-458d-8c12-a0264d9c958c" layer="0" color="8" />
+    <line x1="0.35" y1="-2.7125" x2="0.35" y2="-2.8875" id="05137d50-ecff-42c3-8880-7eb13d5e99d5" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-2.8" r="0.051695936277052455" id="8cf6d5e3-32f7-4239-a8c4-e3ee6293df85" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-2.836554547" x2="0.474054547" y2="-2.763445453" id="7dfc7a40-7938-42e3-a537-1cfc751bcfd6" layer="0" color="8" />
+    <line x1="0.202125298" y1="-2.861547928" x2="0.323191718" y2="-2.861547928" id="51bda1c2-c632-400f-bc91-0c2c73b185b3" layer="0" color="8" />
+    <line x1="0.323191718" y1="-2.861547928" x2="0.323191718" y2="-2.742139953" id="6f1d4937-6bf3-49f1-9090-3c071db8dc47" layer="0" color="8" />
+    <line x1="0.323191718" y1="-2.742139953" x2="0.202125298" y2="-2.742139953" id="7bf508c0-25ad-4e49-8654-a9db31c2f8fb" layer="0" color="8" />
+    <line x1="0.202125298" y1="-2.742139953" x2="0.202125298" y2="-2.861547928" id="6292974f-30de-4471-bf19-105de68d6a17" layer="0" color="8" />
+    <line x1="0.0" y1="-3.15" x2="0.0875" y2="-3.15" id="a84f1f09-acd6-454f-97cc-82d9f7a16cc1" layer="0" />
+    <line x1="0.175" y1="-3.2375" x2="0.525" y2="-3.2375" id="28f797ad-8169-469c-989a-cd9e96dcc89c" layer="0" color="8" />
+    <line x1="0.525" y1="-3.2375" x2="0.525" y2="-3.0625" id="619956e0-780d-48f9-87cf-efbc61d059f9" layer="0" color="8" />
+    <line x1="0.525" y1="-3.0625" x2="0.175" y2="-3.0625" id="97f5cb4d-0e2e-4895-8225-4993caa79fff" layer="0" color="8" />
+    <line x1="0.175" y1="-3.0625" x2="0.175" y2="-3.2375" id="4a5c67f6-d75c-4ea4-be48-7aaa17a21938" layer="0" color="8" />
+    <line x1="0.35" y1="-3.0625" x2="0.35" y2="-3.2375" id="703e42eb-601f-446d-81c5-f785c10f4d2c" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-3.1499999999999995" r="0.051695936277052455" id="4071b37f-380b-407e-a197-83ba2a15712a" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-3.186554547" x2="0.474054547" y2="-3.113445453" id="902bf42a-7d97-42c2-a898-66d7dc29bbe1" layer="0" color="8" />
+    <line x1="0.202125298" y1="-3.211547928" x2="0.323191718" y2="-3.211547928" id="9b971aee-33cd-4c56-8e2e-33667f1983a9" layer="0" color="8" />
+    <line x1="0.323191718" y1="-3.211547928" x2="0.323191718" y2="-3.092139953" id="30ac45ae-ca31-4156-8e07-25866c382b38" layer="0" color="8" />
+    <line x1="0.323191718" y1="-3.092139953" x2="0.202125298" y2="-3.092139953" id="295524c5-057f-4024-ad5c-072dcda1bf3e" layer="0" color="8" />
+    <line x1="0.202125298" y1="-3.092139953" x2="0.202125298" y2="-3.211547928" id="c9a3dbc3-995c-4112-8fef-cd8c6d450d2e" layer="0" color="8" />
+    <line x1="0.0" y1="-3.5" x2="0.0875" y2="-3.5" id="45385a40-6ddb-44bc-aa43-6b06b5b354e5" layer="0" />
+    <line x1="0.175" y1="-3.5875" x2="0.525" y2="-3.5875" id="122f3208-9542-46e7-b374-4659edb3a1ac" layer="0" color="8" />
+    <line x1="0.525" y1="-3.5875" x2="0.525" y2="-3.4125" id="280eaf9f-f4f0-4f91-9bfe-17f427850ba2" layer="0" color="8" />
+    <line x1="0.525" y1="-3.4125" x2="0.175" y2="-3.4125" id="a1f0ea9c-a057-40f7-b55e-375ddba0b8ad" layer="0" color="8" />
+    <line x1="0.175" y1="-3.4125" x2="0.175" y2="-3.5875" id="2ce00232-83fe-4de9-a8df-eca0bd4d6385" layer="0" color="8" />
+    <line x1="0.35" y1="-3.4125" x2="0.35" y2="-3.5875" id="d3975d58-a70f-4043-aa3c-010db7cc171c" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-3.5" r="0.051695936277052455" id="d88b5303-a09b-459e-aff2-0f987c361034" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-3.536554547" x2="0.474054547" y2="-3.463445453" id="870597df-afb0-4b1b-83f8-48b34c6af919" layer="0" color="8" />
+    <line x1="0.202125298" y1="-3.561547928" x2="0.323191718" y2="-3.561547928" id="3ba3f181-55ed-4348-b41a-8744e5a22b59" layer="0" color="8" />
+    <line x1="0.323191718" y1="-3.561547928" x2="0.323191718" y2="-3.442139953" id="4e934efe-81fa-4c19-b386-e5caf068d592" layer="0" color="8" />
+    <line x1="0.323191718" y1="-3.442139953" x2="0.202125298" y2="-3.442139953" id="7dd6bc63-f082-45ad-9d82-8c0ebe67159b" layer="0" color="8" />
+    <line x1="0.202125298" y1="-3.442139953" x2="0.202125298" y2="-3.561547928" id="e39fd874-a816-4f73-97c6-39400770d960" layer="0" color="8" />
+    <line x1="0.0" y1="-3.85" x2="0.0875" y2="-3.85" id="208dd9d8-69ab-4755-b475-b7eba857952d" layer="0" />
+    <line x1="0.175" y1="-3.9375" x2="0.525" y2="-3.9375" id="0043789a-abc4-4e30-be01-83976c459796" layer="0" color="8" />
+    <line x1="0.525" y1="-3.9375" x2="0.525" y2="-3.7625" id="42b9aedd-5e4e-4214-87b9-beb7bd65a8bc" layer="0" color="8" />
+    <line x1="0.525" y1="-3.7625" x2="0.175" y2="-3.7625" id="45449512-4774-40aa-9273-f5d438619add" layer="0" color="8" />
+    <line x1="0.175" y1="-3.7625" x2="0.175" y2="-3.9375" id="48470543-6e0a-4a59-b7de-99423f45c53d" layer="0" color="8" />
+    <line x1="0.35" y1="-3.7625" x2="0.35" y2="-3.9375" id="18e0425e-b98e-4fa4-af9a-46faeb88a3bf" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-3.8499999999999996" r="0.051695936277052455" id="21d62ab2-c506-4a2f-af66-6f4fe1a2faaa" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-3.886554547" x2="0.474054547" y2="-3.813445453" id="9f186dc4-3589-4f16-87d5-5b8ed8f51a57" layer="0" color="8" />
+    <line x1="0.202125298" y1="-3.911547928" x2="0.323191718" y2="-3.911547928" id="16a72a8c-0dbf-491e-9202-32f89e62dfc4" layer="0" color="8" />
+    <line x1="0.323191718" y1="-3.911547928" x2="0.323191718" y2="-3.792139953" id="d9837775-f5c2-46bb-85b7-fee29e49bbd0" layer="0" color="8" />
+    <line x1="0.323191718" y1="-3.792139953" x2="0.202125298" y2="-3.792139953" id="6f8b732c-41f5-4db7-9433-5b780e31265e" layer="0" color="8" />
+    <line x1="0.202125298" y1="-3.792139953" x2="0.202125298" y2="-3.911547928" id="fc883a40-d1bd-4ba4-b49e-a7aed0bd7100" layer="0" color="8" />
+    <line x1="0.0" y1="-4.2" x2="0.0875" y2="-4.2" id="a5f90f06-fc7d-4afa-872a-ecedf4bae935" layer="0" />
+    <line x1="0.175" y1="-4.2875" x2="0.525" y2="-4.2875" id="f411426a-5f41-4d41-a730-3ba3ec65e78f" layer="0" color="8" />
+    <line x1="0.525" y1="-4.2875" x2="0.525" y2="-4.1125" id="729937d5-a959-42d4-87fa-3939730488ba" layer="0" color="8" />
+    <line x1="0.525" y1="-4.1125" x2="0.175" y2="-4.1125" id="b871469d-a649-43b6-8f0d-7e8a4ff4d551" layer="0" color="8" />
+    <line x1="0.175" y1="-4.1125" x2="0.175" y2="-4.2875" id="77c3c07b-d7da-462b-976c-7facd747df86" layer="0" color="8" />
+    <line x1="0.35" y1="-4.1125" x2="0.35" y2="-4.2875" id="3ff0dc63-34cf-4dd6-8f72-5144369e4fb9" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-4.2" r="0.051695936277052455" id="9261bc6c-7d39-4471-a747-d3a2375ff487" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-4.236554547" x2="0.474054547" y2="-4.163445453" id="f5f8e093-5090-47fc-9621-f6e7ccfcc91c" layer="0" color="8" />
+    <line x1="0.202125298" y1="-4.261547928" x2="0.323191718" y2="-4.261547928" id="27104108-2b70-4f62-a285-b75f4b499ddc" layer="0" color="8" />
+    <line x1="0.323191718" y1="-4.261547928" x2="0.323191718" y2="-4.142139953" id="9cd1e082-bb63-4b46-bed2-5c785fec1d14" layer="0" color="8" />
+    <line x1="0.323191718" y1="-4.142139953" x2="0.202125298" y2="-4.142139953" id="73dbb820-c24e-453c-9a82-a99249d7038c" layer="0" color="8" />
+    <line x1="0.202125298" y1="-4.142139953" x2="0.202125298" y2="-4.261547928" id="d01ed093-1c1c-43f9-880e-e2564dbe8bc0" layer="0" color="8" />
+    <line x1="0.0" y1="-4.55" x2="0.0875" y2="-4.55" id="4b11d140-b767-4bb2-a1ad-258609e3a766" layer="0" />
+    <line x1="0.175" y1="-4.6375" x2="0.525" y2="-4.6375" id="3072e2bb-9677-4b5f-9d7e-c170ab1d45b2" layer="0" color="8" />
+    <line x1="0.525" y1="-4.6375" x2="0.525" y2="-4.4625" id="b8cac8ce-c0d2-41f7-ba66-0acd908a82e5" layer="0" color="8" />
+    <line x1="0.525" y1="-4.4625" x2="0.175" y2="-4.4625" id="e9d14772-686c-4d8b-96ab-3b149cc6a4c3" layer="0" color="8" />
+    <line x1="0.175" y1="-4.4625" x2="0.175" y2="-4.6375" id="81d6e043-5075-421c-9cf1-ce158e49171d" layer="0" color="8" />
+    <line x1="0.35" y1="-4.4625" x2="0.35" y2="-4.6375" id="01a46e85-5d48-4646-81eb-46f247f29887" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-4.55" r="0.051695936277052455" id="9a808076-1ce1-4865-8d47-915ee899ef42" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-4.586554547" x2="0.474054547" y2="-4.513445453" id="7c32879c-7fab-4d9f-a5c2-92943ce21f4d" layer="0" color="8" />
+    <line x1="0.202125298" y1="-4.611547928" x2="0.323191718" y2="-4.611547928" id="d3616039-b18b-4648-a3b6-a2fd0e0e2999" layer="0" color="8" />
+    <line x1="0.323191718" y1="-4.611547928" x2="0.323191718" y2="-4.492139953" id="de917404-8643-4b11-bb0e-433a9e39c036" layer="0" color="8" />
+    <line x1="0.323191718" y1="-4.492139953" x2="0.202125298" y2="-4.492139953" id="ff98c2ef-7936-4e78-84c0-2c06b9ea33eb" layer="0" color="8" />
+    <line x1="0.202125298" y1="-4.492139953" x2="0.202125298" y2="-4.611547928" id="8ed37de5-a758-4582-9d4d-9717b78d8c4e" layer="0" color="8" />
+    <line x1="0.0" y1="-4.9" x2="0.0875" y2="-4.9" id="a84e50c8-64f2-4b8b-b01e-7fd192cd7075" layer="0" />
+    <line x1="0.175" y1="-4.9875" x2="0.525" y2="-4.9875" id="dcec6ae5-dae6-427e-8e3c-9eb3dd7542f2" layer="0" color="8" />
+    <line x1="0.525" y1="-4.9875" x2="0.525" y2="-4.8125" id="383e9e70-0805-44db-b873-f2050154ba1b" layer="0" color="8" />
+    <line x1="0.525" y1="-4.8125" x2="0.175" y2="-4.8125" id="3683452d-1dfc-4a7b-9fdd-8c129eda108e" layer="0" color="8" />
+    <line x1="0.175" y1="-4.8125" x2="0.175" y2="-4.9875" id="64faca84-2cf5-4aba-bb6f-1eb66f7e2e4c" layer="0" color="8" />
+    <line x1="0.35" y1="-4.8125" x2="0.35" y2="-4.9875" id="f86c5ee8-38f6-4ed8-aed2-eea57fed973f" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-4.8999999999999995" r="0.051695936277052455" id="3b3cab69-9bfb-4744-84ff-5ed486f7ac28" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-4.936554547" x2="0.474054547" y2="-4.863445453" id="9cac72ec-3ae4-493a-9955-99fc79fde00a" layer="0" color="8" />
+    <line x1="0.202125298" y1="-4.961547928" x2="0.323191718" y2="-4.961547928" id="31bbd946-4ca7-4535-860e-f3bb7997875b" layer="0" color="8" />
+    <line x1="0.323191718" y1="-4.961547928" x2="0.323191718" y2="-4.842139953" id="402ddb1f-aa9b-4808-ac85-89b074868e38" layer="0" color="8" />
+    <line x1="0.323191718" y1="-4.842139953" x2="0.202125298" y2="-4.842139953" id="d3a84d52-4849-4987-9e81-139853e98075" layer="0" color="8" />
+    <line x1="0.202125298" y1="-4.842139953" x2="0.202125298" y2="-4.961547928" id="3d620841-d1a3-4ff6-bac5-4578575b9ade" layer="0" color="8" />
+    <line x1="0.0" y1="-5.25" x2="0.0875" y2="-5.25" id="f6761361-6af0-42ef-8d48-4e72f8fe7276" layer="0" />
+    <line x1="0.175" y1="-5.3375" x2="0.525" y2="-5.3375" id="c3877fbf-e9a3-4af0-9f93-f1255bf30350" layer="0" color="8" />
+    <line x1="0.525" y1="-5.3375" x2="0.525" y2="-5.1625" id="cb39a88e-70d5-485b-8d90-2bd47472e6c9" layer="0" color="8" />
+    <line x1="0.525" y1="-5.1625" x2="0.175" y2="-5.1625" id="7d076c4d-4aca-4701-8b6c-29a11faf161e" layer="0" color="8" />
+    <line x1="0.175" y1="-5.1625" x2="0.175" y2="-5.3375" id="b6ac2887-c35a-4649-87d5-f302587ecbda" layer="0" color="8" />
+    <line x1="0.35" y1="-5.1625" x2="0.35" y2="-5.3375" id="f09c7c89-ebb9-413e-b2f6-1204221122e3" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-5.249999999999999" r="0.051695936277052455" id="147e83f1-ce4c-4978-8735-ac1c176d396b" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-5.286554547" x2="0.474054547" y2="-5.213445453" id="17a4f193-2b25-4219-85b4-3b0d94a1d116" layer="0" color="8" />
+    <line x1="0.202125298" y1="-5.311547928" x2="0.323191718" y2="-5.311547928" id="922dd14f-9176-4845-bb38-cdc3cf5bd339" layer="0" color="8" />
+    <line x1="0.323191718" y1="-5.311547928" x2="0.323191718" y2="-5.192139953" id="efb8ee83-c264-43b8-8d19-03ba6b6c397b" layer="0" color="8" />
+    <line x1="0.323191718" y1="-5.192139953" x2="0.202125298" y2="-5.192139953" id="c1c12676-92b8-41fc-b0dd-172252444d4f" layer="0" color="8" />
+    <line x1="0.202125298" y1="-5.192139953" x2="0.202125298" y2="-5.311547928" id="c8df1a78-b4bc-4c40-a45d-301ee66acedf" layer="0" color="8" />
+    <line x1="0.0" y1="-5.6" x2="0.0875" y2="-5.6" id="efd9a01a-e84b-4828-9d98-b49e4c0b86cd" layer="0" />
+    <line x1="0.175" y1="-5.6875" x2="0.525" y2="-5.6875" id="912e970a-cd25-4018-84e9-bb60633ad59f" layer="0" color="8" />
+    <line x1="0.525" y1="-5.6875" x2="0.525" y2="-5.5125" id="db6ede84-0c5f-4cba-ad08-e950cab87d4c" layer="0" color="8" />
+    <line x1="0.525" y1="-5.5125" x2="0.175" y2="-5.5125" id="cf6810f1-7f57-4f9d-b9f4-95e35f3e0dc4" layer="0" color="8" />
+    <line x1="0.175" y1="-5.5125" x2="0.175" y2="-5.6875" id="be562008-ddff-4dc1-b795-269278f4af09" layer="0" color="8" />
+    <line x1="0.35" y1="-5.5125" x2="0.35" y2="-5.6875" id="1489075f-9641-448b-a5d3-0a904fd8adb3" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-5.599999999999999" r="0.051695936277052455" id="8d099719-4516-4c91-a50e-e31c3ca4383f" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-5.636554547" x2="0.474054547" y2="-5.563445453" id="3c85571c-8192-42a3-b788-996b5d3e4dd2" layer="0" color="8" />
+    <line x1="0.202125298" y1="-5.661547928" x2="0.323191718" y2="-5.661547928" id="0615e3fa-7102-4e62-bf09-498dec3541af" layer="0" color="8" />
+    <line x1="0.323191718" y1="-5.661547928" x2="0.323191718" y2="-5.542139953" id="49390f61-bcfb-4e6b-81c3-6d4a6a7156dc" layer="0" color="8" />
+    <line x1="0.323191718" y1="-5.542139953" x2="0.202125298" y2="-5.542139953" id="01c7f35a-fec7-454c-a04e-4f71c0e0efea" layer="0" color="8" />
+    <line x1="0.202125298" y1="-5.542139953" x2="0.202125298" y2="-5.661547928" id="e0059d8d-81b7-4ca2-934d-f1cc8c097d13" layer="0" color="8" />
+    <text x="0.5461622358459826" y="-3.203070211323216" resolved="&lt;size=0.833&gt;C2&lt;/size&gt;" height="0.12" rotation="0.0" id="b90ec469-03e6-49db-abcf-459f3da480e0" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;C2&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-3.5530702113232158" resolved="&lt;size=0.833&gt;9&lt;/size&gt;" height="0.12" rotation="0.0" id="1272b2f6-a4e1-4362-a613-91976c3547c7" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;9&lt;/size&gt;</source>
+    </text>
+    <line x1="1.05" y1="-6.025" x2="1.05" y2="0.075" id="9dd2768b-d940-4b74-a989-2ae9ba31cee7" layer="0" color="8" />
+    <line x1="0.1875" y1="0.175" x2="0.95" y2="0.175" id="886523ee-ad42-4039-a5c6-8c1bb155d522" layer="0" color="8" />
+    <line x1="0.0875" y1="0.075" x2="0.0875" y2="-6.025" id="47a81d91-0ec9-4433-b1c1-f184855673ee" layer="0" color="8" />
+    <line x1="0.175" y1="-6.0375" x2="0.525" y2="-6.0375" id="e5dd5e54-92a2-45db-999d-dfc4182dd543" layer="0" color="8" />
+    <line x1="0.525" y1="-6.0375" x2="0.525" y2="-5.8625" id="bb6c124f-2cbf-45e0-ab42-9e469e09bb17" layer="0" color="8" />
+    <line x1="0.525" y1="-5.8625" x2="0.175" y2="-5.8625" id="dc8163d8-3c34-4310-ad66-41302cd0afce" layer="0" color="8" />
+    <line x1="0.175" y1="-5.8625" x2="0.175" y2="-6.0375" id="9f4ce43a-57d8-4843-8b96-27e9ab3e7c53" layer="0" color="8" />
+    <line x1="0.35" y1="-5.8625" x2="0.35" y2="-6.0375" id="e3708244-65bb-4f43-af08-d504431d14ab" layer="0" color="8" />
+    <circle cx="0.4375000000000009" cy="-5.949999999999999" r="0.051695936277052455" id="689d281e-56dd-4e0b-b626-ef57db970ac5" filled="0" layer="0" color="8" />
+    <line x1="0.400945453" y1="-5.986554547" x2="0.474054547" y2="-5.913445453" id="29e29207-94fa-4af2-ac91-f1e2965a78e1" layer="0" color="8" />
+    <line x1="0.202125298" y1="-6.011547928" x2="0.323191718" y2="-6.011547928" id="6ad1ffcd-dc07-4350-aebd-68f383ebde22" layer="0" color="8" />
+    <line x1="0.323191718" y1="-6.011547928" x2="0.323191718" y2="-5.892139953" id="9f62675a-5393-4358-ae42-619d37d506b4" layer="0" color="8" />
+    <line x1="0.323191718" y1="-5.892139953" x2="0.202125298" y2="-5.892139953" id="1398a70b-7fc5-4845-aaf2-2dd937fac99d" layer="0" color="8" />
+    <line x1="0.202125298" y1="-5.892139953" x2="0.202125298" y2="-6.011547928" id="547e162a-d057-4dcf-bcd1-8bc5a03ac496" layer="0" color="8" />
+    <line x1="0.0" y1="-5.95" x2="0.0875" y2="-5.95" id="8f1beda1-bf50-40ad-a39e-384452a92825" layer="0" />
+    <arc cx="0.1875" cy="0.07500000000000107" r="0.1" start="90.0" end="180.0" id="7d9d6ecf-850c-45a8-a015-b89001854833" layer="0" color="8" />
+    <arc cx="0.9500000000000002" cy="0.07500000000000107" r="0.1" start="0.0" end="90.0" id="f8c992d9-5a1f-4fa5-b480-7f257fd5201e" layer="0" color="8" />
+    <text x="0.5461622358459826" y="-0.7530702113232177" resolved="&lt;size=0.833&gt;2&lt;/size&gt;" height="0.12" rotation="0.0" id="3d361e12-b33d-40f5-9b48-da2587a28924" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;2&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-1.1030702113232174" resolved="&lt;size=0.833&gt;3&lt;/size&gt;" height="0.12" rotation="0.0" id="f0e446cc-da21-4ce9-b2ef-722f3f9c7dd4" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;3&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-1.453070211323218" resolved="&lt;size=0.833&gt;4&lt;/size&gt;" height="0.12" rotation="0.0" id="a6929821-b43d-44ef-b90c-379643e4b7e9" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;4&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-1.8030702113232184" resolved="&lt;size=0.833&gt;5&lt;/size&gt;" height="0.12" rotation="0.0" id="85e53ae2-462d-4937-a044-fae641c5251c" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;5&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-2.153070211323218" resolved="&lt;size=0.833&gt;6&lt;/size&gt;" height="0.12" rotation="0.0" id="98355383-0d9e-49a4-8fcd-ea983636ee74" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;6&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-2.5030702113232177" resolved="&lt;size=0.833&gt;7&lt;/size&gt;" height="0.12" rotation="0.0" id="9349144e-3900-4d58-8360-0fdba2baa87e" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;7&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-2.8530702113232174" resolved="&lt;size=0.833&gt;8&lt;/size&gt;" height="0.12" rotation="0.0" id="02bb7acb-8500-465d-94b4-1f45b6d9c91d" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;8&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-3.9030702113232154" resolved="&lt;size=0.833&gt;10&lt;/size&gt;" height="0.12" rotation="0.0" id="32b494e7-50a9-48d8-81c2-821f11de3a62" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;10&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-4.253070211323216" resolved="&lt;size=0.833&gt;11&lt;/size&gt;" height="0.12" rotation="0.0" id="6ff52e88-d013-4600-a406-3a1ea61b356c" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;11&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-4.603070211323216" resolved="&lt;size=0.833&gt;12&lt;/size&gt;" height="0.12" rotation="0.0" id="d973bc86-78a7-4227-a448-b051a41d2b9f" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;12&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-4.953070211323215" resolved="&lt;size=0.833&gt;13&lt;/size&gt;" height="0.12" rotation="0.0" id="7c85cff4-ed7b-4e25-a86f-6798b6b4fdfb" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;13&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-5.303070211323216" resolved="&lt;size=0.833&gt;14&lt;/size&gt;" height="0.12" rotation="0.0" id="efab7099-b82c-4eea-979c-0d690c5ceb17" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;14&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-5.653070211323215" resolved="&lt;size=0.833&gt;15&lt;/size&gt;" height="0.12" rotation="0.0" id="b3e3d241-2fec-4152-9ed2-4d14b7054e52" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;15&lt;/size&gt;</source>
+    </text>
+    <text x="0.5461622358459826" y="-6.003070211323216" resolved="&lt;size=0.833&gt;16&lt;/size&gt;" height="0.12" rotation="0.0" id="ae1f9e18-78ef-4298-b07a-3b1218f05221" align="left" tstyle="Default" rich="1" layer="0">
+      <source>&lt;size=0.833&gt;16&lt;/size&gt;</source>
+    </text>
+    <line x1="0.95" y1="-6.125" x2="0.1875" y2="-6.125" id="e20bb640-9089-45a2-85bd-1645615b3e94" layer="0" color="8" />
+    <arc cx="0.1875" cy="-6.025" r="0.1" start="180.0" end="270.0" id="75edc9ce-eaed-4ffe-87e0-1226697a5341" layer="0" color="8" />
+    <arc cx="0.9500000000000002" cy="-6.025" r="0.1" start="270.0" end="0.0" id="9bac2d4d-deed-4375-909f-827a228b000a" layer="0" color="8" />
+    <line x1="0.58031348" y1="0.0875" x2="0.93031348" y2="0.0875" id="8305be72-530e-473a-b503-d78c4ce261dd" layer="0" />
+    <line x1="0.93031348" y1="0.0875" x2="0.93031348" y2="-2.887784836" id="30a47cd8-89a5-4c77-8368-865847de295f" layer="0" />
+    <line x1="0.93031348" y1="-2.887784836" x2="0.58031348" y2="-2.887784836" id="559593b6-46bc-4675-82fa-61075d5bee49" layer="0" />
+    <line x1="0.581013189" y1="-3.057033254" x2="0.931013189" y2="-3.057033254" id="27fe7655-c9af-4077-abaa-1d1504fce927" layer="0" />
+    <line x1="0.931013189" y1="-3.057033254" x2="0.931013189" y2="-6.03231809" id="21249b34-0cd9-48ba-977b-c9e50c0089fa" layer="0" />
+    <line x1="0.931013189" y1="-6.03231809" x2="0.581013189" y2="-6.03231809" id="926c0ddb-177a-4e5e-9bad-9daa6dad3871" layer="0" />
+    <text x="0.5250000000000001" y="0.2750000000000011" height="0.1" rotation="0.0" id="5acf09e7-03cb-4c04-8c67-e0c26f519fa6" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{tag}</source>
+    </text>
+    <text x="0.5250000000000001" y="0.43500000000000105" height="0.1" rotation="0.0" id="feaf7206-12cd-491f-ae01-2f245ea1dcd4" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{part_label}</source>
+    </text>
+    <text x="0.5250000000000001" y="0.5950000000000011" height="0.1" rotation="0.0" id="7b7e18a4-66e6-4a54-b7a8-978e88ffc3dc" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{description}</source>
+    </text>
+  </entities>
+</block>

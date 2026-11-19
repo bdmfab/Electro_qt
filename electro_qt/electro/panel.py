@@ -168,8 +168,8 @@ def footprint_terminals(blk, qty, cx=0.0, cy=0.0, rot=0.0):
 
 
 def pinned(e):
-    """A locked rail / duct: it cannot be moved, turned or resized."""
-    return isinstance(e, m.PanelObj) and e.kind in ("rail", "duct") and e.locked
+    """A locked layout object: it cannot be moved, turned or resized."""
+    return isinstance(e, m.PanelObj) and e.locked
 
 
 def terminal_labels(o):
@@ -365,11 +365,192 @@ def dim_line(d):
 
 
 def dim_text(value, units="in"):
-    """Dimension text: inches (12.500") or millimetres (317.5)."""
+    """Dimension text: inches to one decimal (12.5") or whole millimetres (318)."""
     if units == "mm":
-        return f"{value * MM:.1f}"
-    return f"{value:.3f}\""
+        return f"{value * MM:.0f}"
+    return f"{value:.1f}\""
 
 
 def dim_auto_orient(p1, p2):
     return "h" if abs(p2[0] - p1[0]) >= abs(p2[1] - p1[1]) else "v"
+
+
+def rename_tags(project, renames):
+    """Panel parts follow their schematic part when its tag changes. renames: {(block, old tag): new tag},
+    applied all at once (so two tags that swap places work). -> number of panel parts renamed."""
+    n = 0
+    for sh in project.sheets.values():
+        if not sh.panel:
+            continue
+        for o in panel_objects(sh.entities):
+            new = renames.get((o.block, o.tag)) if o.kind == "part" and o.tag else None
+            if new is not None and new != o.tag:
+                o.tag = new
+                n += 1
+    return n
+
+
+# ------------------------------------------------------------------ parametric dimensions
+_EPS = 1e-9
+
+
+def anchor_value(o, key):
+    x0, y0, x1, y1 = box(o)
+    return {"x0": x0, "xc": (x0 + x1) / 2, "x1": x1, "y0": y0, "yc": (y0 + y1) / 2, "y1": y1}[key]
+
+
+def _parse(a):
+    if not a or ":" not in a:
+        return None
+    i, k = a.rsplit(":", 1)
+    return (i, k) if k in ("x0", "xc", "x1", "y0", "yc", "y1") else None
+
+
+def _ends(byid, d):
+    """[(object or None, key or None)] for the two ends of a dimension."""
+    out = []
+    for a in (d.a1, d.a2):
+        p = _parse(a)
+        o = byid.get(p[0]) if p else None
+        out.append((o, p[1]) if o is not None else (None, None))
+    return out
+
+
+def find_anchor(objs, pt, orient, tol=0.02):
+    """The (object, key) whose edge / centre the point sits on (x edges for a horizontal dimension, y for a
+    vertical one); the smallest object wins, so a part beats the back plate it stands on."""
+    ks = ("x0", "xc", "x1") if orient == "h" else ("y0", "yc", "y1")
+    best = None
+    for o in objs:
+        x0, y0, x1, y1 = box(o)
+        if not (x0 - tol <= pt[0] <= x1 + tol and y0 - tol <= pt[1] <= y1 + tol):
+            continue
+        for k in ks:
+            if abs(anchor_value(o, k) - pt[0 if orient == "h" else 1]) <= tol:
+                area = (x1 - x0) * (y1 - y0)
+                if best is None or area < best[0]:
+                    best = (area, o, k)
+    return (best[1], best[2]) if best else None
+
+
+def attach_dim(entities, d):
+    """Tie the ends of a dimension to the object edges they sit on (an end on no edge stays free; both ends on
+    the same object stay free too - that is the object's own size)."""
+    objs = panel_objects(entities)
+    hit = [find_anchor(objs, (d.x1, d.y1), d.orient), find_anchor(objs, (d.x2, d.y2), d.orient)]
+    if hit[0] and hit[1] and hit[0][0] is hit[1][0]:
+        hit = [None, None]
+    d.a1 = f"{hit[0][0].id}:{hit[0][1]}" if hit[0] else ""
+    d.a2 = f"{hit[1][0].id}:{hit[1][1]}" if hit[1] else ""
+    return bool(d.a1 or d.a2)
+
+
+def attach_all(entities):
+    """Dimensions drawn before they could be attached: attach those whose ends sit on object edges."""
+    n = 0
+    for d in entities:
+        if isinstance(d, m.Dim) and not d.a1 and not d.a2 and attach_dim(entities, d):
+            n += 1
+    return n
+
+
+def sync_dims(entities):
+    """Attached dimension ends follow their objects (derived data: always recomputed from the objects)."""
+    byid = {o.id: o for o in panel_objects(entities)}
+    changed = False
+    for d in entities:
+        if not isinstance(d, m.Dim):
+            continue
+        for i, (o, k) in enumerate(_ends(byid, d)):
+            if o is None:
+                continue
+            v = anchor_value(o, k)
+            x0, y0, x1, y1 = box(o)
+            if d.orient == "h":
+                x, y = (d.x1, d.y1) if i == 0 else (d.x2, d.y2)
+                nx, ny = v, min(max(y, y0), y1)
+            else:
+                x, y = (d.x1, d.y1) if i == 0 else (d.x2, d.y2)
+                nx, ny = min(max(x, x0), x1), v
+            if abs(nx - x) > _EPS or abs(ny - y) > _EPS:
+                if i == 0:
+                    d.x1, d.y1 = nx, ny
+                else:
+                    d.x2, d.y2 = nx, ny
+                changed = True
+    return changed
+
+
+def propagate(entities, shifts):
+    """shifts {object id: [dx, dy]}: objects that are moving. Every unlocked object dimensioned to a moving one
+    follows it along the dimension's direction so the dimension keeps its value; the chain goes on through
+    further dimensions and stops at locked objects (their dimension just changes). Adds to `shifts`."""
+    byid = {o.id: o for o in panel_objects(entities)}
+    dims = [d for d in entities if isinstance(d, m.Dim)]
+    queue = list(shifts)
+    guard = 0
+    while queue and guard < 10000:
+        guard += 1
+        oid = queue.pop()
+        for d in dims:
+            (o1, _), (o2, _) = _ends(byid, d)
+            if o1 is None or o2 is None or o1 is o2:
+                continue
+            if oid == o1.id:
+                other = o2
+            elif oid == o2.id:
+                other = o1
+            else:
+                continue
+            ax = 0 if d.orient == "h" else 1
+            c = shifts[oid][ax]
+            if abs(c) < _EPS or other.locked:
+                continue
+            cur = shifts.setdefault(other.id, [0.0, 0.0])
+            if abs(cur[ax]) > _EPS:
+                continue                          # already moving along that direction
+            cur[ax] = c
+            queue.append(other.id)
+    return shifts
+
+
+def dim_signed(d):
+    return (d.x2 - d.x1) if d.orient == "h" else (d.y2 - d.y1)
+
+
+def plan_dim_value(entities, d, new):
+    """Change a dimension to `new`: both ends unlocked -> both objects move, half each; one locked -> the other
+    moves the whole way; both locked -> refused. -> (shifts {id: [dx, dy]}, message); shifts is None when
+    refused, {} when neither end is attached to an object (the caller moves the free point)."""
+    byid = {o.id: o for o in panel_objects(entities)}
+    (o1, _), (o2, _) = _ends(byid, d)
+    cur = dim_signed(d)
+    sign = -1.0 if cur < 0 else 1.0
+    diff = sign * new - cur
+    if abs(diff) < _EPS:
+        return {}, ""
+    if o1 is None and o2 is None:
+        return {}, ""
+    ax = 0 if d.orient == "h" else 1
+    free1 = o1 is not None and not o1.locked
+    free2 = o2 is not None and not o2.locked
+    shifts = {}
+    if free1 and free2:
+        shifts[o1.id] = [0.0, 0.0]; shifts[o2.id] = [0.0, 0.0]
+        shifts[o1.id][ax] = -diff / 2
+        shifts[o2.id][ax] = diff / 2
+    elif free2:
+        shifts[o2.id] = [0.0, 0.0]; shifts[o2.id][ax] = diff
+    elif free1:
+        shifts[o1.id] = [0.0, 0.0]; shifts[o1.id][ax] = -diff
+    else:
+        return None, "Both ends of this dimension are locked - unlock one to change it."
+    propagate(entities, shifts)
+    return shifts, ""
+
+
+def shift_mods(entities, shifts, skip=()):
+    """[(object, {cx, cy})] that apply the shifts (objects in `skip` are left to the caller)."""
+    byid = {o.id: o for o in panel_objects(entities)}
+    return [(byid[i], {"cx": byid[i].cx + dx, "cy": byid[i].cy + dy}) for i, (dx, dy) in shifts.items()
+            if i in byid and i not in skip and (abs(dx) > _EPS or abs(dy) > _EPS)]

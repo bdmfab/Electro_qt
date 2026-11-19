@@ -407,6 +407,8 @@ class PartPropertiesDialog(QDialog):
             mode, keep["tag_link"] = "linked", self.link_tag
         elif tag != self.ref.tag or mode == "linked":
             mode = "manual"
+        if tag in ("", getattr(b, "tag_prefix", "") or "") and not self.link_tag:
+            mode = None              # a blank tag, or just the prefix (PS), is automatic: Update tags numbers it (PS0111)
         if mode:
             keep["tag_mode"] = mode
         return tag, keep

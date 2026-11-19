@@ -3,7 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QDialog, QFormLayout, QVBoxLayout, QDialogButtonBox, QComboBox, QDoubleSpinBox,
                                QRadioButton, QLineEdit, QLabel, QDockWidget, QListWidget, QListWidgetItem,
-                               QPushButton, QWidget)
+                               QPushButton, QWidget, QHBoxLayout)
 from .. import panel as pn
 from .. import model as m
 
@@ -149,44 +149,169 @@ class TerminalsDialog(QDialog):
         return self.block.currentData(), self.qty.value(), self.ident.text().strip(), self.first.value()
 
 
-class TerminalLabelsDialog(QDialog):
-    """Identifier and the label of every terminal of a block (stack)."""
+class WireNumberDialog(QDialog):
+    """Every wire number that ends at a dot, with how many dots it reaches: "01131 (8)". Double-click (or
+    Apply) uses it for the selected terminal; right-click > Apply to multiple... asks how many terminals."""
 
-    def __init__(self, parent, obj):
+    def __init__(self, parent, numbers, room=1, used=None):
         super().__init__(parent)
-        from PySide6.QtWidgets import QSpinBox, QTableWidget, QTableWidgetItem
-        self.obj = obj
+        from PySide6.QtWidgets import QListWidgetItem, QMenu
+        used = used or {}
+        self.setWindowTitle("Label from wire numbers")
+        self.chosen = None                                   # (wire number, how many terminals)
+        self._room = room
+        self.list = QListWidget()
+        for num, where in numbers.items():
+            left = max(0, len(where) - used.get(num, 0))        # dots not yet given to a terminal
+            it = QListWidgetItem(f"{num} x {left}" + ("" if left else "   (all used)"))
+            it.setData(Qt.ItemDataRole.UserRole, (num, max(1, left)))
+            if not left:
+                it.setForeground(Qt.GlobalColor.gray)
+            self.list.addItem(it)
+        self.list.itemDoubleClicked.connect(lambda _it: self._single())
+        self.list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.list.customContextMenuRequested.connect(self._menu)
+        info = QLabel("Wire numbers at the dots on the drawing; x N = dots not yet given to a terminal.\n"
+                      "Select one and Apply, or right-click it: Apply to multiple...")
+        if not numbers:
+            info.setText("No wire numbers reach a dot yet (press Update wire numbers first).")
+        apply = QPushButton("Apply to the selected terminal")
+        apply.clicked.connect(self._single)
+        cancel = QPushButton("Cancel"); cancel.clicked.connect(self.reject)
+        row = QHBoxLayout(); row.addStretch(1); row.addWidget(apply); row.addWidget(cancel)
+        lay = QVBoxLayout(self); lay.addWidget(info); lay.addWidget(self.list); lay.addLayout(row)
+        self.resize(320, 420)
+
+    def _current(self):
+        it = self.list.currentItem()
+        return it.data(Qt.ItemDataRole.UserRole) if it is not None else None
+
+    def _single(self):
+        cur = self._current()
+        if cur is not None:
+            self.chosen = (cur[0], 1)
+            self.accept()
+
+    def _menu(self, pos):
+        from PySide6.QtWidgets import QMenu, QInputDialog
+        it = self.list.itemAt(pos)
+        if it is None:
+            return
+        self.list.setCurrentItem(it)
+        num, n = it.data(Qt.ItemDataRole.UserRole)
+        menu = QMenu(self)
+        a1 = menu.addAction("Apply to the selected terminal")
+        a2 = menu.addAction(f"Apply to multiple...")
+        act = menu.exec(self.list.mapToGlobal(pos))
+        if act is a1:
+            self._single()
+        elif act is a2:
+            k, ok = QInputDialog.getInt(self, "Apply to multiple", f"Number of terminals to label {num}:", n, 1, 500)
+            if ok:
+                self.chosen = (num, k)
+                self.accept()
+
+
+class TerminalLabelsDialog(QDialog):
+    """Identifier, quantity and the label of every terminal of a block (stack)."""
+
+    def __init__(self, parent, obj, project=None):
+        super().__init__(parent)
+        from PySide6.QtWidgets import QSpinBox, QTableWidget
+        self.obj, self.project = obj, project
         self.setWindowTitle(f"Terminal labels - {obj.block}")
         self.ident = QLineEdit(obj.ident)
         self.first = QSpinBox(); self.first.setRange(0, 9999); self.first.setValue(obj.first)
+        self.stack = obj.kind == "terminals"
+        self.qty = QSpinBox(); self.qty.setRange(1, 500); self.qty.setValue(max(1, obj.qty))
         self.table = QTableWidget(0, 1)
         self.table.setHorizontalHeaderLabels(["Label"])
         self.table.horizontalHeader().setStretchLastSection(True)
-        n = max(1, obj.qty) if obj.kind == "terminals" else 1
-        self.table.setRowCount(n)
-        self._fill(pn.terminal_labels(obj))
+        self.table.setRowCount(self.qty.value() if self.stack else 1)
+        self._fill(0, pn.terminal_labels(obj))
         self.ident.textEdited.connect(lambda _t: self._auto())
         self.first.valueChanged.connect(lambda _v: self._auto())
-        note = QLabel("Editing the identifier or first number renumbers all terminals;\nedit a label below to override just that one.")
+        self.qty.valueChanged.connect(self._resize)
+        note = QLabel("Editing the identifier or first number renumbers all terminals;\n"
+                      "edit a label below to override just that one.")
         bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         bb.accepted.connect(self.accept); bb.rejected.connect(self.reject)
         form = QFormLayout(); form.addRow("Identifier", self.ident); form.addRow("First terminal number", self.first)
-        lay = QVBoxLayout(self); lay.addLayout(form); lay.addWidget(note); lay.addWidget(self.table); lay.addWidget(bb)
-        self.resize(360, 420)
+        if self.stack:
+            form.addRow("Quantity", self.qty)
+        lay = QVBoxLayout(self); lay.addLayout(form); lay.addWidget(note); lay.addWidget(self.table)
+        if project is not None:
+            wn = QPushButton("Label from wire numbers...")
+            wn.setToolTip("Select a terminal below, then pick a wire number that ends at a dot")
+            wn.clicked.connect(self._from_numbers)
+            lay.addWidget(wn)
+        lay.addWidget(bb)
+        self.resize(380, 480)
 
-    def _fill(self, labels):
+    def count(self):
+        return self.table.rowCount()
+
+    def _fill(self, start, labels):
         from PySide6.QtWidgets import QTableWidgetItem
         for i, t in enumerate(labels):
-            self.table.setItem(i, 0, QTableWidgetItem(t))
+            self.table.setItem(start + i, 0, QTableWidgetItem(t))
+
+    def _auto_labels(self, n):
+        tmp = m.PanelObj(self.obj.kind, 0, 0, 1, 1, qty=n, ident=self.ident.text().strip(), first=self.first.value())
+        return pn.terminal_labels(tmp)
 
     def _auto(self):
-        tmp = m.PanelObj(self.obj.kind, 0, 0, 1, 1, qty=self.obj.qty, ident=self.ident.text().strip(), first=self.first.value())
-        self._fill(pn.terminal_labels(tmp))
+        self._fill(0, self._auto_labels(self.count()))
+
+    def _resize(self, n):
+        if not self.stack:
+            return
+        old = self.count()
+        keep = [self.table.item(i, 0).text() if self.table.item(i, 0) else "" for i in range(old)]
+        self.table.setRowCount(n)
+        if n > old:
+            self._fill(old, self._auto_labels(n)[old:])         # new terminals continue the numbering
+        else:
+            self._fill(0, keep[:n])
+
+    def _from_numbers(self):
+        from PySide6.QtWidgets import QMessageBox
+        from .. import dots
+        row = max(0, self.table.currentRow())
+        used = dict(dots.used_counts(self.project, self.obj))
+        for i in range(self.count()):                       # labels already typed in this dialog
+            it = self.table.item(i, 0)
+            t = it.text().strip() if it else ""
+            if t:
+                used[t] = used.get(t, 0) + 1
+        dlg = WireNumberDialog(self, dots.dot_numbers(self.project), self.count() - row, used)
+        if not dlg.exec() or dlg.chosen is None:
+            return
+        number, k = dlg.chosen
+        room = self.count() - row
+        if k > room:
+            if not self.stack:
+                k = room
+            else:
+                B = QMessageBox.StandardButton
+                r = QMessageBox.question(self, "Not enough terminals",
+                                         f"{number} reaches {k} dots but only {room} terminal(s) are left from here.\n\n"
+                                         f"Add the other {k - room} terminal(s) to the stack?",
+                                         B.Yes | B.No | B.Cancel)
+                if r == B.Cancel:
+                    return
+                if r == B.Yes:
+                    self.qty.setValue(self.count() + k - room)       # grows the table
+                else:
+                    k = room
+        for i in range(row, row + k):
+            self.table.item(i, 0).setText(number)
 
     def values(self):
-        """-> (ident, first, [labels])"""
+        """-> (ident, first, [labels], qty)"""
         return (self.ident.text().strip(), self.first.value(),
-                [self.table.item(i, 0).text() for i in range(self.table.rowCount())])
+                [self.table.item(i, 0).text() for i in range(self.table.rowCount())],
+                self.table.rowCount() if self.stack else self.obj.qty)
 
 
 class PanelSizeDialog(QDialog):

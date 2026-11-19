@@ -338,3 +338,37 @@ A placed block now counts with its real extent (graphics + slots, rotated / mirr
 
 ## 0.20.7
 - The footprint profiles file `.electro_profiles.ini` now lives in the **block library folder** (with the blocks), not next to the project, so every project shares it. A file left next to a project by 0.20.2-0.20.6 is copied into the library the first time that project is opened, if the library has none yet; after that the library's file is the one used (merge old entries into it by hand if you had profiles in several project folders).
+
+## 0.20.8 - Load fix, marked-wire zones, panel layouts last, 11x17 panel PDF
+- **Fix:** projects and library blocks saved by 0.20.3-0.20.7 after Part properties stored `exclude_bom="False"` and could not be loaded. They load again (old `False`/`True` are understood) and new files store 0/1.
+- **Wire numbers:** a net's zone now comes from the end of the wire you **marked**, not from the net's left-most point. A marked wire in zone 13 on a net that also reaches zone 16 is numbered from zone 13 (mark 1 + zone 13 = 01131). Nets whose marked wire was already at the left-most point are unchanged.
+- **Panel layouts are always the last sheets.** Sheet > Add sheet inserts before them (the layout moves up one page, its tab stays last); moving or renumbering sheets keeps them last; New panel layout goes after the last layout.
+- **Panel layout PDF**: printed on an 11x17 landscape page with the border and title block (no zone numbers). The whole drawing (plate, rails, ducts, parts, dimensions) is scaled uniformly to fit the drawing area and centred, so nothing is clipped. The layout on screen and the DXF stay 1:1 and are not changed.
+
+## 0.20.9
+- Panel layout PDF: the title block now fills in (job, drawn, date, page, title lines; the layout's name if the title lines are empty).
+- Dimensions on layouts show one decimal in inches (12.5") and whole millimetres (318), on screen, in the PDF and in the DXF.
+
+## 0.21.0 - Reference PDFs, terminal labels from wire numbers
+- **Reference PDFs**: File > Open reference PDF... shows a PDF in a tab (several can be open). The PDF is **embedded in the project file**, so it travels with it and reopens in its tab. Closing the tab asks, then removes it from the project completely. PDF export > all sheets appends the reference PDFs after the drawings in the merged job file (not in the per-sheet files). DXF export ignores them. Needs `pip install pypdf` for the merge (without it the export says they were left out) and the PDF viewer from PySide6 (`PySide6-Addons`, normally installed with PySide6).
+- **Terminal labels from wire numbers**: in the terminal labels dialog (double-click a terminal block), select a terminal and press *Label from wire numbers...*. The list shows every wire number that ends at a dot with the number of dots it reaches, e.g. `01131 (8)`. Double-click / Apply labels the selected terminal; right-click > *Apply to multiple...* asks how many terminals (default: the count, 8 here) and labels that many in a row from the selected terminal, overwriting what is there. If the stack has too few terminals left, it asks whether to add the rest to the stack. The dialog now also has a **Quantity** for a stack (the stack grows or shrinks by whole blocks). Run Update wire numbers first so the list is current.
+
+## 0.21.1
+- Label from wire numbers: the dots are now the automatic junction dots (where wires tee together) as well as dots placed with the Dot tool; 0.21.0 only looked at placed dots.
+
+## 0.21.2
+- Label from wire numbers: the list shows how many dots of each number are still unlabelled ("01131 x 2" after 6 of 8 are applied), counting every terminal on every layout; fully used numbers are greyed and can still be applied (overwrite). Apply to multiple defaults to the remaining count. Every terminal, labelled or not, stays in the BOM.
+
+## 0.21.3
+- Part properties: a blank tag, or just the block's prefix (e.g. "PS"), now counts as automatic, so Update tags numbers it (PS0111). Any other typed tag stays manual and is skipped by Update tags.
+
+## 0.21.4
+- Panel layout parts follow their schematic part's tag: Update tags and editing the tag in Part properties now rename the matching parts on the panel layout (PS -> PS0111). Parts already stale in a file are fixed by pressing Update tags once.
+
+## 0.22.0 - parametric layout dimensions
+- A dimension's ends attach to the object edge / centre they sit on when you draw it (the smallest object wins, so a part beats the back plate). Dimensions already in a file attach the same way when the layout opens. Ends on no edge stay free; dragging a dimension point free of its object detaches it. Pasted dimensions are not attached.
+- Moving, resizing, rotating or undoing an object updates the dimensions attached to it.
+- Change a dimension: double-click it (or right-click > Dimension value...) and type the value. Both objects unlocked: both move, half each. One locked: the other moves the whole way. Both locked: refused with a message.
+- Move an object: an unlocked object dimensioned to it follows along the dimension's direction, so the dimension keeps its value; the chain continues through further dimensions and stops at locked objects (that dimension then changes). A dragged object moves only along the dimension's axis for its neighbour.
+- Lock (L / right-click) now works on every layout object (back plate, parts, terminal stacks as well as rails and ducts), shown by a small ring. Lock the back plate to keep it fixed.
+- Dimension text height moved to the right-click menu only (double-click now edits the value).

@@ -106,6 +106,22 @@ def cover_sheet(title: str = "Cover Sheet") -> m.Sheet:
     return s
 
 
+PANEL_DRAWING_AREA = (0.4, 0.6, 14.57, 10.5)     # (left, bottom, right, top) inside the border of the 11x17 page
+
+
+def panel_pdf_sheet(panel: m.Sheet) -> m.Sheet:
+    """The 11x17 landscape page a panel layout is printed on: border and title block, no zone numbers. Only for
+    PDF export; the layout itself stays 1:1 on its own sheet."""
+    s = m.Sheet(panel.page, panel.title, zone_count=25, row_pitch=0.35, width=17.0, height=11.0, zone0_y=9.45)
+    out = []
+    _border(out)
+    _title_block(out)
+    s.frame = out
+    s.logo_box = (15.134, 6.55, 1.4, 4.2)
+    s.title_lines = list(panel.title_lines) if any(panel.title_lines) else [panel.title, "", "", ""]
+    return s
+
+
 def columns_of(sheet: m.Sheet) -> int:
     return 2 if sheet.zone_count == 50 else 1
 

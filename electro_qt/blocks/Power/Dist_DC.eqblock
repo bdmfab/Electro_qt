@@ -23,13 +23,13 @@
     <line x1="0.6875" y1="0.0875" x2="0.0875" y2="0.0875" id="bc23e92c-d89b-436c-ab84-abc0fe2f02eb" layer="0" color="8" />
     <line x1="0.0" y1="-0.35" x2="0.0875" y2="-0.35" id="898d72f4-0320-40c9-99cd-ab98a1ed82ea" layer="0" />
     <line x1="0.6875" y1="0.0875" x2="0.7875" y2="-0.0125" id="fe157d2a-971f-4607-9d61-ceba20619aa2" layer="0" color="8" />
-    <text x="0.46411245411742275" y="0.1875" height="0.1" rotation="0.0" id="0f8c9554-86a8-460d-b49e-7aa14f6e2baa" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="0.46411245411742275" y="0.1875" height="0.1" rotation="0.0" id="430ae5d4-691b-4dd3-96c5-49294a3552b6" align="center" tstyle="Default" rich="0" layer="0">
       <source>{tag}</source>
     </text>
-    <text x="0.46411245411742275" y="0.34750000000000003" height="0.1" rotation="0.0" id="2a42170d-2bf9-4675-ad12-bd7e3fa881be" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="0.46411245411742275" y="0.34750000000000003" height="0.1" rotation="0.0" id="7fbd62eb-5ae9-467c-9ed7-2970b7055499" align="center" tstyle="Default" rich="0" layer="0">
       <source>{part_label}</source>
     </text>
-    <text x="0.46411245411742275" y="0.5075000000000001" height="0.1" rotation="0.0" id="c73f5a63-d075-4d87-9dd2-4dd285f56671" align="center" tstyle="Default" rich="0" layer="0">
+    <text x="0.46411245411742275" y="0.5075000000000001" height="0.1" rotation="0.0" id="71061ea3-e9af-46b2-9294-afc703be447f" align="center" tstyle="Default" rich="0" layer="0">
       <source>{description}</source>
     </text>
   </entities>

@@ -129,6 +129,7 @@ class DimTool(Tool):
         sc = self.scene
         d = self._dim()
         d.style = m.Style(layer=sc.panel_layer("dim"))
+        pn.attach_dim(sc.sheet.entities, d)                # ends on object edges follow / drive those objects
         sc.add_entities([d], "Dimension")
         sc.tool_done()
         sc._select_entities([d])

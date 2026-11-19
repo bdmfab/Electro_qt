@@ -321,6 +321,11 @@ def connector_groups(project, sheets_nets, names=None, sources=None):
     return out
 
 
+def _mark_anchor(line):
+    """Left-most (then top-most) end of the marked wire: the point its zone is taken from."""
+    return min(((line.x1, line.y1), (line.x2, line.y2)), key=lambda p: (round(p[0], 4), -p[1]))
+
+
 def update(project) -> Report:
     """Compute every wire number. Does not modify the project: Report.changes lists the
     new WireNumber for each line that needs one (auto lines only). Wires that continue on
@@ -356,7 +361,7 @@ def update(project) -> Report:
                     n.incident = int(n.origin.mark)
                 except ValueError:
                     n.incident = default_start(project, n.layer)
-                n.base = n.anchor
+                n.base = _mark_anchor(n.origin)          # the zone is the marked wire's, not the net's left-most point
                 queue.append(n)
     while queue:
         n = queue.pop(0)

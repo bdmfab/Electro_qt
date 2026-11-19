@@ -1295,7 +1295,7 @@ def test_terminal_stack_bom_ungroup_and_dims():
     assert [r for r in reports.bom(p)[1] if r[5] == "TB"][0][1] == 5
     d = m.Dim(2, 2, 7, 4, "h", 5.5)
     assert pn.dim_value(d) == 5 and pn.dim_auto_orient((0, 0), (1, 3)) == "v"
-    assert pn.dim_text(5, "in") == '5.000"' and pn.dim_text(1, "mm") == "25.4"
+    assert pn.dim_text(5, "in") == '5.0"' and pn.dim_text(1, "mm") == "25" and pn.dim_text(12.54, "in") == '12.5"'
     pan.entities.append(d)
     g.rotate_entity(d, (0, 0), 90)
     assert d.orient == "v" and pn.dim_value(d) == 5
@@ -1376,7 +1376,8 @@ def test_locked_rail_is_pinned():
     assert EditorScene.is_pinned(r)
     r.locked = False
     assert not EditorScene.is_pinned(r)
-    assert not EditorScene.is_pinned(m.PanelObj("part", 1, 1, 1, 1, locked=True))
+    assert EditorScene.is_pinned(m.PanelObj("part", 1, 1, 1, 1, locked=True))      # any layout object can be locked
+    assert not EditorScene.is_pinned(m.PanelObj("part", 1, 1, 1, 1))
 
 
 def test_profile_per_placed_part_and_type(tmp_path):
@@ -1437,3 +1438,213 @@ def test_profiles_adopted_into_library(tmp_path):
     pf.save("A", "K2", "", 1, 1, 1, block="B")                 # new profiles go to the library
     assert "K2" in pf.load(str(lib)) and "K2" not in pf.load(str(proj))
     pf.set_folder("")
+
+
+def test_exclude_bom_roundtrip_and_old_false(tmp_path):
+    from electro import xmlio
+    p = m.Project("t"); b = m.BlockDef("x", exclude_bom=False); b.exclude_bom = True; p.blocks["x"] = b
+    p.blocks["y"] = m.BlockDef("y", exclude_bom=False)
+    p.add_sheet(m.Sheet(1, "One"))
+    f = str(tmp_path / "t.eqt"); save_project(p, f)
+    q = load_project(f)
+    assert q.blocks["x"].exclude_bom and not q.blocks["y"].exclude_bom
+    import zipfile, re
+    z = zipfile.ZipFile(f)
+    names = [n for n in z.namelist() if n.startswith("library/")]
+    assert all(re.search(r'exclude_bom="[01]"', z.read(n).decode()) for n in names)
+    # a file written by 0.20.3-0.20.7 holds "False" / "True"
+    g = str(tmp_path / "old.eqt")
+    with zipfile.ZipFile(f) as zi, zipfile.ZipFile(g, "w") as zo:
+        for n in zi.namelist():
+            d = zi.read(n)
+            if n.startswith("library/"):
+                d = d.replace(b'exclude_bom="1"', b'exclude_bom="True"').replace(b'exclude_bom="0"', b'exclude_bom="False"')
+            zo.writestr(n, d)
+    r = load_project(g)
+    assert r.blocks["x"].exclude_bom and not r.blocks["y"].exclude_bom
+
+
+def test_zone_comes_from_the_marked_wire():
+    from electro import numbering as nb
+    p = m.Project("t")
+    p.layers["DC"] = m.Layer("DC", kind="wire", numbered=True, scheme="<page><zone><incident>")
+    sh = p.add_sheet(m.Sheet(1, "One"))
+    a = m.Line(7.0, 4.9, 13.0, 4.9, m.Style(layer="DC")); a.mark = "1"           # marked, zone 13
+    b = m.Line(13.0, 4.9, 13.0, 3.85, m.Style(layer="DC"))
+    c = m.Line(6.0, 3.85, 13.0, 3.85, m.Style(layer="DC"))                        # left-most end is at zone 16
+    sh.entities += [a, b, c]
+    rep = nb.update(p)
+    assert {wn.value for lst in rep.changes.values() for _, wn in lst} == {"01131"}
+
+
+def test_panel_sheets_stay_last():
+    p = m.Project("t")
+    p.add_sheet(m.Sheet(1, "A")); p.add_sheet(m.Sheet(2, "B"))
+    pl = m.Sheet(3, "Panel"); pl.panel = True; p.add_sheet(pl)
+    n = m.Sheet(99, "New")
+    assert p.add_sheet_before_panels(n) == 3
+    assert [(pg, s.panel) for pg, s in sorted(p.sheets.items())] == [(1, False), (2, False), (3, False), (4, True)]
+    assert p.sheets[4] is pl and pl.page == 4 and n.page == 3
+    p.move_sheet(1, 4)                                  # moving past the layout cannot put it behind it
+    assert p.sheets[max(p.sheets)].panel
+    p2 = m.Project("t2"); pl2 = m.Sheet(1, "P"); pl2.panel = True; p2.add_sheet(pl2)
+    assert p2.add_sheet_before_panels(m.Sheet(5, "X")) == 1 and pl2.page == 2
+
+
+def test_panel_pdf_page_template():
+    from electro import templates
+    pl = m.Sheet(3, "Layout", width=28, height=28); pl.panel = True
+    s = templates.panel_pdf_sheet(pl)
+    assert (s.width, s.height, s.page) == (17.0, 11.0, 3) and not s.panel
+    assert s.frame and s.title_lines[0] == "Layout"
+    assert not any(isinstance(e, m.Text) and e.source == "00" for e in s.frame)      # no zone numbers
+
+
+def test_dot_numbers_list_and_counts():
+    from electro import dots
+    p = m.Project("t")
+    p.layers["DC"] = m.Layer("DC", kind="wire", numbered=True, scheme="<page><zone><incident>")
+    s1 = p.add_sheet(m.Sheet(1, "One")); s2 = p.add_sheet(m.Sheet(2, "Two"))
+    def wire(x1, y1, x2, y2, val):
+        ln = m.Line(x1, y1, x2, y2, m.Style(layer="DC")); ln.number = m.WireNumber("auto", val); return ln
+    s1.entities += [wire(1, 1, 3, 1, "01131"), wire(1, 2, 3, 2, "01131"), wire(1, 3, 3, 3, "01160")]
+    s1.entities += [m.Circle(3, 1, 0.04, m.Style(layer="DC"), filled=True), m.Circle(3, 2, 0.04, m.Style(layer="DC"), filled=True),
+                    m.Circle(3, 3, 0.04, m.Style(layer="DC"), filled=True), m.Circle(9, 9, 0.04, m.Style(layer="DC"), filled=True)]
+    s2.entities += [wire(1, 1, 3, 1, "01131"), m.Circle(1, 1, 0.04, m.Style(layer="DC"), filled=True),
+                    m.Circle(2, 1, 0.04, m.Style(layer="DC"), filled=False)]          # an open circle is not a dot
+    d = dots.dot_numbers(p)
+    assert list(d) == ["01131", "01160"] and len(d["01131"]) == 3 and len(d["01160"]) == 1
+
+
+def test_pdf_append(tmp_path):
+    import pytest
+    from electro import pdfmerge
+    if not pdfmerge.available():
+        pytest.skip("pypdf not installed")
+    from pypdf import PdfWriter, PdfReader
+    def pdf(n):
+        w = PdfWriter()
+        for _ in range(n):
+            w.add_blank_page(100, 100)
+        import io; b = io.BytesIO(); w.write(b); return b.getvalue()
+    f = tmp_path / "a.pdf"; f.write_bytes(pdf(2))
+    assert pdfmerge.append_pdfs(str(f), [pdf(3), b"not a pdf"]) == [1]
+    assert len(PdfReader(str(f)).pages) == 5
+
+
+def test_reference_pdfs_roundtrip(tmp_path):
+    p = m.Project("t"); p.add_sheet(m.Sheet(1, "One"))
+    p.assets["ref/manual.pdf"] = b"%PDF-1.4 fake"
+    f = str(tmp_path / "t.eqt"); save_project(p, f)
+    assert load_project(f).assets["ref/manual.pdf"] == b"%PDF-1.4 fake"
+
+
+def test_dot_numbers_include_junction_dots():
+    from electro import dots
+    p = m.Project("t")
+    p.layers["DC"] = m.Layer("DC", kind="wire", numbered=True, scheme="<page><zone><incident>")
+    sh = p.add_sheet(m.Sheet(1, "One"))
+    def wire(x1, y1, x2, y2):
+        ln = m.Line(x1, y1, x2, y2, m.Style(layer="DC")); ln.number = m.WireNumber("auto", "01130"); return ln
+    sh.entities += [wire(1, 1, 1, 5), wire(1, 2, 3, 2), wire(1, 4, 3, 4)]         # two taps on a bus: two automatic dots
+    assert len(dots.dot_numbers(p)["01130"]) == 2
+
+
+def test_used_counts_track_labelled_terminals():
+    from electro import dots
+    p = m.Project("t")
+    sh = p.add_sheet(m.Sheet(2, "Panel")); sh.panel = True
+    o = m.PanelObj("terminals", 0, 0, 6, 1, qty=6, names="01131|01131|01131|01131|01131|01131")
+    sh.entities.append(o)
+    assert dots.used_counts(p)["01131"] == 6
+    assert "01131" not in dots.used_counts(p, skip=o)
+
+
+def test_bare_prefix_tag_is_automatic_after_update():
+    from electro import blocks as bk
+    p = m.Project("t")
+    sh = p.add_sheet(m.Sheet(1, "One"))
+    blk = m.BlockDef("Dist_DC"); blk.tag_prefix = "PS"; p.blocks["Dist_DC"] = blk
+    r = m.BlockRef("Dist_DC", 1.0, 5.6, 0.0, False, style=m.Style("0"))
+    r.tag = "PS"
+    sh.entities.append(r)
+    bk.update_tags(p)
+    assert r.tag.startswith("PS") and r.tag != "PS"
+
+
+def test_update_tags_renames_panel_parts():
+    from electro import blocks as bk
+    p = m.Project("t")
+    sh = p.add_sheet(m.Sheet(1, "One"))
+    blk = m.BlockDef("Dist_DC"); blk.tag_prefix = "PS"; p.blocks["Dist_DC"] = blk
+    r = m.BlockRef("Dist_DC", 1.0, 5.6, 0.0, False, style=m.Style("0")); r.tag = "PS"
+    sh.entities.append(r)
+    pl = p.add_sheet(m.Sheet(2, "Panel")); pl.panel = True
+    o = m.PanelObj("part", 0, 0, 1, 1, block="Dist_DC", tag="PS"); pl.entities.append(o)
+    bk.update_tags(p)
+    assert r.tag != "PS" and o.tag == r.tag
+
+
+def _dim_fixture():
+    from electro import panel as pn
+    sh = m.Sheet(2, "Panel"); sh.panel = True
+    a = m.PanelObj("part", 2.0, 5.0, 2.0, 2.0)       # x 1..3
+    b = m.PanelObj("part", 8.0, 5.0, 2.0, 2.0)       # x 7..9
+    c = m.PanelObj("part", 12.0, 5.0, 2.0, 2.0)      # x 11..13
+    d = m.Dim(3.0, 5.0, 7.0, 5.0, "h", 7.0)          # a right edge -> b left edge, 4"
+    e = m.Dim(9.0, 5.0, 11.0, 5.0, "h", 7.0)         # b right edge -> c left edge, 2"
+    sh.entities += [a, b, c, d, e]
+    pn.attach_all(sh.entities)
+    return pn, sh, a, b, c, d, e
+
+
+def test_dimension_attaches_to_edges_and_follows():
+    pn, sh, a, b, c, d, e = _dim_fixture()
+    assert d.a1.endswith(":x1") and d.a2.endswith(":x0")
+    b.cx += 1.0
+    pn.sync_dims(sh.entities)
+    assert abs(pn.dim_value(d) - 5.0) < 1e-9 and abs(d.x2 - 8.0) < 1e-9
+
+
+def test_dimension_value_moves_both_unlocked_symmetrically():
+    pn, sh, a, b, c, d, e = _dim_fixture()
+    shifts, _ = pn.plan_dim_value(sh.entities, d, 6.0)         # +2": a -1, b +1 ...
+    assert shifts[a.id][0] == -1.0 and shifts[b.id][0] == 1.0
+    assert shifts[c.id][0] == 1.0                              # ... c follows b (dimension b-c kept)
+    for o, mod in pn.shift_mods(sh.entities, shifts):
+        for k, v in mod.items():
+            setattr(o, k, v)
+    pn.sync_dims(sh.entities)
+    assert abs(pn.dim_value(d) - 6.0) < 1e-9 and abs(pn.dim_value(e) - 2.0) < 1e-9
+
+
+def test_dimension_value_one_locked_and_both_locked():
+    pn, sh, a, b, c, d, e = _dim_fixture()
+    a.locked = True
+    shifts, _ = pn.plan_dim_value(sh.entities, d, 6.0)
+    assert a.id not in shifts and shifts[b.id][0] == 2.0
+    b.locked = True
+    shifts, why = pn.plan_dim_value(sh.entities, d, 6.0)
+    assert shifts is None and "locked" in why
+
+
+def test_drag_follows_unless_locked():
+    pn, sh, a, b, c, d, e = _dim_fixture()
+    shifts = {a.id: [-1.5, 0.0]}
+    pn.propagate(sh.entities, shifts)
+    assert shifts[b.id][0] == -1.5 and shifts[c.id][0] == -1.5
+    b.locked = True
+    shifts = {a.id: [-1.5, 0.0]}
+    pn.propagate(sh.entities, shifts)
+    assert b.id not in shifts and c.id not in shifts           # stops at the locked part; the dimension changes
+
+
+def test_dim_attachment_roundtrip(tmp_path):
+    from electro import xmlio
+    pn, sh, a, b, c, d, e = _dim_fixture()
+    p = m.Project("t"); p.add_sheet(sh)
+    f = str(tmp_path / "x.eqt")
+    xmlio.save_project(p, f)
+    q = xmlio.load_project(f)
+    dd = [x for x in q.sheets[2].entities if isinstance(x, m.Dim)]
+    assert dd[0].a1 == d.a1 and dd[0].a2 == d.a2

@@ -157,7 +157,7 @@ class PanelItem(_Common, QGraphicsRectItem):
         super().__init__(QRectF(x0, y0, x1 - x0, y1 - y0))
         self.setZValue({"plate": -10, "rail": -5, "duct": -4}.get(e.kind, 0))
         self._setup(e, layers, scene_ref)
-        if e.locked and e.kind in ("rail", "duct"):
+        if e.locked:
             self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
 
     def shape(self):
@@ -264,10 +264,14 @@ class PanelItem(_Common, QGraphicsRectItem):
         self._text(painter, main, r, 0.0 if not sub else 0.18, 0.5 if not sub else 0.32, txt_col)
         if sub:
             self._text(painter, sub, r, -0.18, 0.2, txt_col)
-        if e.locked and e.kind in ("rail", "duct"):
+        if e.locked:
             painter.setPen(QPen(txt_col, 0)); painter.setBrush(Qt.BrushStyle.NoBrush)
-            a, b = pn.end_points(e)
-            for q in (a, b):
+            if e.kind in ("rail", "duct"):
+                pts = pn.end_points(e)
+            else:                                              # a small ring in the corner
+                x0, y0, x1, y1 = pn.box(e)
+                pts = [(x0 + 0.08, y1 - 0.08)]
+            for q in pts:
                 painter.drawEllipse(QPointF(*q), 0.05, 0.05)
 
     @staticmethod

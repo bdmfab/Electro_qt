@@ -521,6 +521,7 @@ def update_tags(project: m.Project) -> int:
         mine.sort(key=lambda r: (zone_of(sh, r.x, r.y), r.x, -r.y))
         refs += [(sh, r) for r in mine]
     taken, changed = set(), 0
+    before = {r.id: r.tag for _, r in refs}
     for sh, r in refs:
         if r.props.get("tag_mode") in ("manual", "linked"):
             continue
@@ -550,6 +551,9 @@ def update_tags(project: m.Project) -> int:
                 moved = True
         if not moved:
             break
+    from . import panel as pn                    # the panel layout's parts carry the new tags too
+    pn.rename_tags(project, {(r.block, before[r.id]): r.tag for _, r in refs
+                             if before.get(r.id) and before[r.id] != r.tag})
     return changed
 
 

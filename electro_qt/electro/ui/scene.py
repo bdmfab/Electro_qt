@@ -168,6 +168,10 @@ class EditorScene(QGraphicsScene):
             self._strip_ids(it)                      # border / title block: nothing to hover, pick or delete
             self.addItem(it)
         self._add_logo()
+        if self.sheet.panel:                         # dimensions follow what they are attached to
+            from .. import panel as pn
+            pn.attach_all(self.sheet.entities)
+            pn.sync_dims(self.sheet.entities)
         for e in self.sheet.entities:
             self._add_item(e)
         self._label_items = []
@@ -333,6 +337,20 @@ class EditorScene(QGraphicsScene):
         sel = old.isSelected() if old is not None else False
         self.sync_remove(e.id)
         self._add_item(e, sel)
+        if isinstance(e, m.PanelObj) and self.sheet.panel:
+            self._refresh_dims()
+
+    def _refresh_dims(self):
+        """Attached dimensions follow their objects (the objects changed: moved, resized, undone ...)."""
+        from .. import panel as pn
+        if not pn.sync_dims(self.sheet.entities):
+            return
+        for d in self.sheet.entities:
+            if isinstance(d, m.Dim):
+                old = self._items.get(d.id)
+                sel = old.isSelected() if old is not None else False
+                self.sync_remove(d.id)
+                self._add_item(d, sel)
 
     def selected_entities(self):
         ids = {it.entity_id for it in self.selectedItems() if hasattr(it, "entity_id")}
@@ -387,10 +405,10 @@ class EditorScene(QGraphicsScene):
         return name
 
     def toggle_lock(self):
-        """Lock / unlock the selected rails and ducts (a locked one shows no end handles)."""
-        sel = [e for e in self.selected_entities() if isinstance(e, m.PanelObj) and e.kind in ("rail", "duct")]
+        """Lock / unlock the selected layout objects (a locked one cannot be moved, and no dimension moves it)."""
+        sel = [e for e in self.selected_entities() if isinstance(e, m.PanelObj)]
         if not sel:
-            self.say("Select a DIN rail or wire duct to lock / unlock it"); return
+            self.say("Select a layout object to lock / unlock it"); return
         lock = not all(e.locked for e in sel)
         self.undo.push(EditCmd(self, "Lock" if lock else "Unlock", modify=[(e, {"locked": lock}) for e in sel]))
         self.say(("Locked" if lock else "Unlocked") + f" {len(sel)} object(s)")
@@ -600,6 +618,8 @@ class EditorScene(QGraphicsScene):
         clones = [clone_entity(e) for e in clipboard.CLIP["items"]]
         for c in clones:
             translate(c, dx, dy)
+            if isinstance(c, m.Dim):
+                c.a1 = c.a2 = ""                       # a pasted dimension is not tied to the originals
         self.retag(clones)
         self.add_entities(clones, "Paste")
         return clones
@@ -693,8 +713,8 @@ class EditorScene(QGraphicsScene):
             sub = menu.addMenu("Mirror")
             acts[sub.addAction("Flip left-right")] = lambda: self.mirror_selected("v")
             acts[sub.addAction("Flip top-bottom")] = lambda: self.mirror_selected("h")
-        if any(isinstance(e, m.PanelObj) and e.kind in ("rail", "duct") for e in sel):
-            rd = [e for e in sel if isinstance(e, m.PanelObj) and e.kind in ("rail", "duct")]
+        if any(isinstance(e, m.PanelObj) for e in sel):
+            rd = [e for e in sel if isinstance(e, m.PanelObj)]
             acts[menu.addAction("Unlock\tL" if all(e.locked for e in rd) else "Lock\tL")] = self.toggle_lock
         tl = [e for e in sel if isinstance(e, m.PanelObj) and (e.kind == "terminals" or (e.kind == "part" and not e.tag))]
         if tl:
@@ -702,6 +722,9 @@ class EditorScene(QGraphicsScene):
         if any(isinstance(e, m.PanelObj) and e.kind == "terminals" for e in sel):
             acts[menu.addAction("Ungroup terminal blocks")] = self.ungroup_terminals
         if any(isinstance(e, m.Dim) for e in sel):
+            dd = [e for e in sel if isinstance(e, m.Dim)]
+            if len(dd) == 1:
+                acts[menu.addAction("Dimension value...")] = lambda: self.edit_dim_value(dd[0])
             acts[menu.addAction("Dimension text height...")] = self.dim_text_height
         lay = [e for e in sel if isinstance(e, m.PanelObj) and e.kind in ("part", "terminals") and not e.tag]
         if lay:
@@ -839,7 +862,8 @@ class EditorScene(QGraphicsScene):
                               "before": [(e, {"x1": e.x1, "y1": e.y1, "x2": e.x2, "y2": e.y2})]}
         elif kind in ("dpos", "dp1", "dp2"):
             self.grip_drag = {"kind": kind, "key": key, "ent": e, "tops": [e],
-                              "before": [(e, {"x1": e.x1, "y1": e.y1, "x2": e.x2, "y2": e.y2, "pos": e.pos})]}
+                              "before": [(e, {"x1": e.x1, "y1": e.y1, "x2": e.x2, "y2": e.y2, "pos": e.pos,
+                                                       "a1": e.a1, "a2": e.a2})]}
         elif kind == "pend":
             self.grip_drag = {"kind": kind, "key": key, "ent": e, "tops": [e],
                               "before": [(e, {"cx": e.cx, "cy": e.cy, "w": e.w})]}
@@ -871,8 +895,10 @@ class EditorScene(QGraphicsScene):
             e.pos = self.cursor.point[1 if e.orient == "h" else 0]
         elif kind == "dp1":
             e.x1, e.y1 = self.cursor.point
+            e.a1 = ""                                      # dragged free of its object
         elif kind == "dp2":
             e.x2, e.y2 = self.cursor.point
+            e.a2 = ""
         elif kind == "pend":
             from .. import panel as pn
             i = 0 if pn.axis(e) == "x" else 1
@@ -1064,9 +1090,13 @@ class EditorScene(QGraphicsScene):
         dlg = PartPropertiesDialog(QApplication.activeWindow(), self.project, blk, ref,
                                    folders=self.folder_choices, rules=self.project.prefix_rules)
         if dlg.exec():
+            old_tag = ref.tag
             tag, props = dlg.part_result()                   # (saves / updates the footprint profile)
             if tag != ref.tag or props != ref.props:
                 self.undo.push(EditCmd(self, "Part properties", modify=[(ref, {"tag": tag, "props": props})]))
+                if tag != old_tag and old_tag:                       # panel parts follow the new tag
+                    from .. import panel as _pn
+                    _pn.rename_tags(self.project, {(ref.block, old_tag): tag})
             self.block_values_changed.emit(blk.name, dlg.values())      # type, prefix, poles ... (all copies)
             self.panel_placed.emit()                         # the Panel parts list re-reads footprints
             if dlg.geometry_requested:
@@ -1331,8 +1361,17 @@ class EditorScene(QGraphicsScene):
             refs = [e for e in leaves(ents) if isinstance(e, m.BlockRef)]
             moved_ids = {x.id for x in leaves(ents)}
             mods, adds, rems = bk.follow_plan(self.project, self.sheet, refs, dx, dy, moved_ids) if refs else ([], [], [])
+            follow = []
+            if self.sheet.panel:                     # dimensioned neighbours (not locked) keep their distance
+                from .. import panel as pn
+                shifts = {e.id: [dx, dy] for e in ents if isinstance(e, m.PanelObj)}
+                if shifts:
+                    pn.propagate(self.sheet.entities, shifts)
+                    follow = pn.shift_mods(self.sheet.entities, shifts, skip={e.id for e in ents})
             self.undo.beginMacro("Move")
             self.undo.push(MoveCmd(self, ents, dx, dy))
+            if follow:
+                self.undo.push(EditCmd(self, "Dimensioned parts follow", modify=follow))
             if mods or adds or rems:
                 self.undo.push(EditCmd(self, "Wires follow", modify=mods, add=adds, remove=rems))
             self._trim_wires_at(refs, {id(x) for x, _ in mods} | {id(x) for x in adds})
@@ -1370,7 +1409,7 @@ class EditorScene(QGraphicsScene):
                     self.edit_part(e)
                     return
                 if isinstance(e, m.Dim):
-                    self.dim_text_height([e])
+                    self.edit_dim_value(e)
                     return
                 if isinstance(e, m.PanelObj) and (e.kind == "terminals" or (e.kind == "part" and not e.tag)):
                     self.edit_terminals(e)
@@ -1407,17 +1446,50 @@ class EditorScene(QGraphicsScene):
         self.panel_placed.emit()
 
     def edit_terminals(self, e):
-        """Identifier (TB1) and per-terminal labels (TB1.1 ...) of a terminal block / stack."""
+        """Identifier (TB1), quantity and per-terminal labels (TB1.1 ..., or wire numbers) of a terminal block / stack."""
         from .paneldlg import TerminalLabelsDialog
         from .. import panel as pn
-        dlg = TerminalLabelsDialog(QApplication.activeWindow(), e)
+        dlg = TerminalLabelsDialog(QApplication.activeWindow(), e, self.project)
         if not dlg.exec():
             return
-        ident, first, labels = dlg.values()
-        tmp = m.PanelObj(e.kind, 0, 0, 1, 1, qty=e.qty)
+        ident, first, labels, qty = dlg.values()
+        tmp = m.PanelObj(e.kind, 0, 0, 1, 1, qty=qty)
         pn.set_terminal_labels(tmp, ident, first, labels)
-        if (tmp.ident, tmp.first, tmp.names) != (e.ident, e.first, e.names):
-            self.undo.push(EditCmd(self, "Terminal labels", modify=[(e, {"ident": tmp.ident, "first": tmp.first, "names": tmp.names})]))
+        mod = {"ident": tmp.ident, "first": tmp.first, "names": tmp.names}
+        if e.kind == "terminals" and qty != e.qty:
+            mod["qty"] = qty
+            mod["w"] = e.w / max(1, e.qty) * qty                 # one block's width stays; the stack grows / shrinks
+        if any(getattr(e, k) != v for k, v in mod.items()):
+            self.undo.push(EditCmd(self, "Terminal labels", modify=[(e, mod)]))
+
+    def edit_dim_value(self, d):
+        """Type a new value for a dimension: its attached objects move (both unlocked: half each; one locked: the
+        other the whole way; both locked: refused), and unlocked objects dimensioned to those follow."""
+        from .. import panel as pn
+        from PySide6.QtWidgets import QMessageBox
+        mm = self.sheet.dim_units == "mm"
+        k = 25.4 if mm else 1.0
+        v, ok = QInputDialog.getDouble(QApplication.activeWindow(), "Dimension value",
+                                       f"Distance in {'mm' if mm else 'inches'}:",
+                                       round(pn.dim_value(d) * k, 3), 0.0, 100000.0, 3)
+        if not ok:
+            return
+        new = v / k
+        ents = self.sheet.entities
+        shifts, why = pn.plan_dim_value(ents, d, new)
+        if shifts is None:
+            QMessageBox.information(QApplication.activeWindow(), "Dimension", why)
+            return
+        if not shifts:
+            if abs(new - pn.dim_value(d)) > 1e-9 and not d.a1 and not d.a2:       # a free dimension: move its end
+                s = -1.0 if pn.dim_signed(d) < 0 else 1.0
+                if d.orient == "h":
+                    mod = {"x2": d.x1 + s * new}
+                else:
+                    mod = {"y2": d.y1 + s * new}
+                self.undo.push(EditCmd(self, "Dimension value", modify=[(d, mod)]))
+            return
+        self.undo.push(EditCmd(self, "Dimension value", modify=pn.shift_mods(ents, shifts)))
 
     def dim_text_height(self, dims=None):
         """Text height of the selected dimensions; with none selected, the sheet's default (every dimension
