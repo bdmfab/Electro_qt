@@ -22,11 +22,11 @@ from .partdlg import TagPickerDialog
 TYPES = (("On back plate", "plate"), ("Not on back plate", "off"), ("Off-page connector", "conn"),
          ("Exclude from BOM", "xbom"))
 ALL = {"name", "type", "folder", "prefix", "poles", "inc", "rule", "desc", "tag", "xref", "profile", "mfr", "part",
-       "link", "fp", "pos", "origin", "terms"}
+       "link", "fp", "pos", "hdr", "origin", "terms"}
 SHOW = {"plate": ALL,
         "off": ALL - {"profile", "fp"},
-        "conn": {"name", "type", "folder", "prefix", "tag", "xref", "pos", "origin", "terms"},
-        "xbom": {"name", "type", "folder", "prefix", "poles", "inc", "rule", "desc", "tag", "pos", "origin", "terms"}}
+        "conn": {"name", "type", "folder", "prefix", "tag", "xref", "pos", "hdr", "origin", "terms"},
+        "xbom": {"name", "type", "folder", "prefix", "poles", "inc", "rule", "desc", "tag", "pos", "hdr", "origin", "terms"}}
 LINES = (("description", "desc"), ("part_label", "part"), ("tag", "tag"), ("xref", "xref"))
 
 
@@ -182,6 +182,14 @@ class PartPropertiesDialog(QDialog):
         self.pos.addItem("Inside the part (small)", "center")
         self.pos.setCurrentIndex(max(0, self.pos.findData(b.label_pos)) if b else 0)
         self._row("pos", "Label position" + allc, self.pos)
+        self.hdr = QComboBox()
+        self.hdr.addItem("None (separate lines)", "")
+        for hn in (project.header_styles if project is not None else ()):
+            self.hdr.addItem(hn, hn)
+        self.hdr.setCurrentIndex(max(0, self.hdr.findData(b.header)) if b else 0)
+        self.hdr.setToolTip("How the label text looks: one styled header (Edit > Header styles...), "
+                            "or separate plain lines")
+        self._row("hdr", "Header style" + allc, self.hdr)
         self.origin = None
         if slot_names is not None and self.make:
             self.origin = QComboBox()
@@ -348,6 +356,7 @@ class PartPropertiesDialog(QDialog):
         lines = (have | checked) if self.part_mode else checked
         v["labels"] = tuple(k for k, _ in LINES if k in lines)
         v["label_pos"] = self.pos.currentData()
+        v["header"] = self.hdr.currentData() or ""
         if t != "plate":
             v["mount"] = ""
         elif self.part_mode:

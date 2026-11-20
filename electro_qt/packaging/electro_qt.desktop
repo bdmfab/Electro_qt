@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Electro_qt
+Comment=2D CAD for industrial electrical schematics
+Exec=/opt/Electro_qt/Electro_qt
+Icon=/opt/Electro_qt/electro/ui/resources/icon.png
+Categories=Graphics;Engineering;
+Terminal=false

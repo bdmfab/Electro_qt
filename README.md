@@ -372,3 +372,24 @@ A placed block now counts with its real extent (graphics + slots, rotated / mirr
 - Move an object: an unlocked object dimensioned to it follows along the dimension's direction, so the dimension keeps its value; the chain continues through further dimensions and stops at locked objects (that dimension then changes). A dragged object moves only along the dimension's axis for its neighbour.
 - Lock (L / right-click) now works on every layout object (back plate, parts, terminal stacks as well as rails and ducts), shown by a small ring. Lock the back plate to keep it fixed.
 - Dimension text height moved to the right-click menu only (double-click now edits the value).
+
+## 0.23.0 - header styles
+- **Header styles** (toolbar: Header styles...): a named style saved with the project that says how a part's label looks. It is a multi-line rich-text template with the variables `{DESC}` description, `{PART}` part number, `{LOC}` tag and `{XREF}` cross-reference (`{TAG}` = `{LOC}`, `{PART#}` = `{PART}`). Select a variable in the editor and give it its own size, colour and font (new Font box in the rich-text editor; stored as `<font=...>`). Per style: text height, font, justify (automatic = what the label position needs), line spacing.
+- A block picks a style in Part properties (**Header style**, next to Label position; "None" keeps the old separate lines, so existing files look the same). The label position still decides where it sits. Sizes are fixed - nothing shrinks to fit.
+- A line whose variables are all empty (or switched off in Part properties) drops out and the header closes up. Labels that grow upward (above, bottom corners) stay put at the bottom line.
+- Header styles live in the project; a library block that names a style the project lacks uses the project's first style. Renaming a style updates the blocks that use it.
+- DXF: a block with a header exports a HEADER attribute holding the plain text.
+- Text styles (toolbar box, dialog, Properties "Text style") are removed; a hidden Default remains so old files open.
+
+## 0.23.1
+- Header styles: new **Distance from part** (default 0.1 in) sets how far the text sits from the part (above: from the top; right: from the side; inside: from the corner). Set a smaller value for styles used on small parts.
+- The Header styles dialog no longer has Text height or Font; set sizes and fonts per variable in the text editor (12 pt = the normal 0.1 in height).
+
+## 0.23.2
+- Header styles: Distance from part accepts negative values (down to -2 in), which pull the text down onto the part.
+
+## 0.24.0 - manual and packaging
+- **User manual:** `docs/Electro_qt_Manual.pdf` (rebuild with `python docs/build_manual.py`, needs reportlab). Help > User manual (F1) opens it.
+- **Packaging** (`packaging/`): `build_windows.bat` (PyInstaller one-folder + Inno Setup installer `dist\Electro_qt_Setup.exe`), `build_linux.sh` (PyInstaller one-folder + `dist/Electro_qt-<version>-linux.tar.gz`), `electro_qt.spec`, `electro_qt.iss`, `electro_qt.desktop`. Also `pyproject.toml` / `requirements.txt` (`pip install .`).
+- A packaged build keeps the default block library in the user's data folder (`%APPDATA%\Electro_qt\blocks`, `~/.local/share/Electro_qt/blocks`), filled once from the shipped `blocks`, because the install folder may be read-only (`electro/paths.py`). Preferences stay in QSettings (registry / ~/.config).
+- Build on each target system (a Windows build must be made on Windows, a Linux build on Linux). The installer and packaged builds have not been built or run here.

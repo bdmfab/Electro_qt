@@ -196,7 +196,9 @@ class BlockDef:
     prefix_rule: str = ""                         # e.g. "motor" -> L becomes T
     poles: int = 1
     terminal_text_editable: bool = False         # (kept for old files; terminals are always editable per part)
-    label_pos: str = "above"                      # stacked label: above | right
+    label_pos: str = "above"                      # stacked label: above | right | inside ...
+    header: str = ""                              # name of a HeaderStyle: the label is one styled text ("" = separate lines)
+    header_lines: str = ""                        # with a header: which fields it shows (description,part_label,tag,xref)
     folder: str = ""                              # library folder path, e.g. "Contactors/Auxiliary"
     entities: list = field(default_factory=list)
     slots: list = field(default_factory=list)
@@ -321,6 +323,24 @@ class TextStyle:
     align: str = "left"            # left | center | right
 
 
+@dataclass
+class HeaderStyle:
+    """How a part's label (header) looks: a multi-line rich-text template with the variables {DESC} {PART}
+    {LOC} (the tag) {TAG} {XREF}; each can be given its own colour, size and font in the markup. A line whose
+    variables are all empty drops out, so the header closes up."""
+    name: str
+    template: str = "{DESC}\n{PART}\n{LOC}\n{XREF}"
+    height: float = 0.1           # base text height; <size=> in the template is a multiple of it
+    font: str = ""                # "" = application default
+    align: str = "auto"           # auto (what the label position needs) | left | center | right
+    spacing: float = 1.0          # line spacing, multiple of the normal
+    gap: float = 0.1              # distance from the part to the text (inches)
+
+
+def default_header_styles():
+    return {"Standard": HeaderStyle("Standard")}
+
+
 def default_text_styles():
     return {"Default": TextStyle("Default")}
 
@@ -349,6 +369,7 @@ class Project:
     block_folders: list = field(default_factory=list)   # library folders (even empty ones)
     multiline_presets: dict = field(default_factory=default_multiline_presets)
     text_styles: dict = field(default_factory=default_text_styles)
+    header_styles: dict = field(default_factory=default_header_styles)
     prefix_rules: list = field(default_factory=default_prefix_rules)
     schemes: dict = field(default_factory=dict)    # user wire-number schemes: name -> pattern
     info: dict = field(default_factory=lambda: {"job": "", "drawn": "", "date": ""})

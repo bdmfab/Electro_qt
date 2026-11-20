@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<block name="P4MC_OUT" description="P4MC - Outputs" part_number="xxxx" tag_prefix="MC" hyperlink="" manufacturer="" increment="0" connector="0" prefix_rule="" poles="1" label_pos="above" folder="PLC/P4MC" terminal_text_editable="0">
+<block name="P4MC_OUT" description="P4MC - Outputs" part_number="xxxx" tag_prefix="MC" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" fp_w="0.0" fp_h="0.0" fp_d="0.0" mount="" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="PLC/P4MC" terminal_text_editable="0" header="Standard" header_lines="description,part_label,tag">
   <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <entities>
     <line x1="1.195710143" y1="-0.087660845" x2="0.845710143" y2="-0.087660845" id="ead53e2a-f146-4bc9-8875-12fc4e3c16a4" layer="0" color="8" />
@@ -493,14 +493,8 @@
     <line x1="8.575" y1="-1.05" x2="8.75" y2="-1.05" id="2a728d04-e852-401a-be3e-969957ed4e21" layer="0" />
     <line x1="8.575" y1="-1.4" x2="8.75" y2="-1.4" id="6be39cea-361b-42f5-a88e-7ad0c16a4bca" layer="0" />
     <line x1="8.575" y1="-1.75" x2="8.75" y2="-1.75" id="ad9313b3-8bd3-4d02-80c3-87db95226744" layer="0" />
-    <text x="4.50625" y="0.485348286" height="0.1" rotation="0.0" id="40d6b6a4-dfa4-41a8-845c-7c758db5f0b1" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{tag}</source>
-    </text>
-    <text x="4.50625" y="0.645348286" height="0.1" rotation="0.0" id="37d9efa4-b502-45fc-8c4d-7fbc91f64da7" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{part_label}</source>
-    </text>
-    <text x="4.50625" y="0.8053482860000001" height="0.1" rotation="0.0" id="f9c8ad3e-3a0d-424f-9289-ce70ab4b1ea0" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{description}</source>
+    <text x="4.50625" y="0.485348286" height="0.1" rotation="0.0" id="a37bcc2b-9b51-4191-aec9-17c6d8c04104" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{header}</source>
     </text>
   </entities>
 </block>

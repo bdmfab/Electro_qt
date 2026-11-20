@@ -2,6 +2,7 @@
 from __future__ import annotations
 import copy
 import math
+import re
 from . import model as m
 from . import fields
 from .geometry import (clone_entity, leaves, rotate_entity, mirror_entity, translate, bounds)
@@ -164,6 +165,9 @@ def resolved_entities(project, sheet, block, ref):
     dx, dy = label_offset(ref)
     for t in leaves(ents):
         if isinstance(t, m.Text):
+            if t.source == "{header}":
+                _resolve_header(project, block, ref, ctx, t, dx, dy)
+                continue
             t.resolved = "" if t.source in hidden else fields.resolve(t.source, ctx)
             t.hidden = t.resolved == "" and t.source != ""       # blank value: draw nothing (not the {code})
             if t.source in LABEL_CODES:                          # this part's label dragged away from its home
@@ -218,24 +222,36 @@ def explode_rect(r: m.Rect):
     return [m.Line(*pts[i], *pts[(i + 1) % 4], m.Style(**vars(r.style))) for i in range(4)]
 
 
-LABEL_CODES = ("{description}", "{part_label}", "{tag}", "{xref}")      # top to bottom
+LABEL_CODES = ("{description}", "{part_label}", "{tag}", "{xref}", "{header}")      # top to bottom ({header}: one styled text)
 
 
 def label_lines_of(block: m.BlockDef):
     """Which stacked-label lines the block currently shows ('description', 'part_label', 'tag')."""
     have = {t.source for t in block.entities if isinstance(t, m.Text)}
+    if "{header}" in have:
+        got = set(block.header_lines.split(","))
+        return tuple(k for k in ("description", "part_label", "tag", "xref") if k in got)
     return tuple(c[1:-1] for c in LABEL_CODES if c in have)
 
 
-def rebuild_label(block: m.BlockDef, lines, pos="above"):
+def rebuild_label(block: m.BlockDef, lines, pos="above", header=None):
     """Replace the block's stacked label. lines: any of description / part_label / tag.
     'above': centred over the part, description on top, tag next to the part.
-    'right': left-aligned beside the part."""
+    'right': left-aligned beside the part.
+    header: name of a HeaderStyle ("" = separate lines; None = keep the block's current choice): the label is
+    then one styled text placed at the same spot (see header_markup)."""
     block.entities[:] = [e for e in block.entities
                          if not (isinstance(e, m.Text) and e.source in LABEL_CODES)]
     block.label_pos = pos
+    if header is not None:
+        block.header = header
     lines = [k for k in ("description", "part_label", "tag", "xref") if k in lines]
+    block.header_lines = ",".join(lines) if block.header else ""
     if not lines:
+        return
+    if block.header:
+        x, y, al = _header_anchor(block, pos)
+        block.entities.append(m.Text(x, y, "{header}", "", 0.1, 0.0, m.Style("0"), align=al))
         return
     bb = bounds(block.entities) or (0.0, 0.0, 0.0, 0.0)
     if pos == "center":                                   # small text inside the part, centred
@@ -270,6 +286,103 @@ def rebuild_label(block: m.BlockDef, lines, pos="above"):
             block.entities.append(m.Text((x0 + x1) / 2, y, "{" + key + "}", "", 0.1, 0.0,
                                          m.Style("0"), align="center"))
             y += 0.16
+
+
+def _header_anchor(block, pos):
+    """(x, y, align) of the header's anchor line: the bottom line for labels that grow upward (above, bottom
+    corners), the top line for those that hang down (right, top corners)."""
+    bb = bounds(block.entities) or (0.0, 0.0, 0.0, 0.0)
+    xs, ys = [bb[0], bb[2]], [bb[1], bb[3]]
+    for s in block.slots:
+        xs.append(s.x); ys.append(s.y)
+    x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+    if pos == "center":
+        return (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2, "center"
+    if pos in ("topleft", "topright"):
+        return (x0 + 0.1 if pos == "topleft" else x1 - 0.1), y1 - 0.2, ("left" if pos == "topleft" else "right")
+    if pos in ("bottomleft", "bottomright"):
+        return (x0 + 0.1 if pos == "bottomleft" else x1 - 0.1), y0 + 0.1, ("left" if pos == "bottomleft" else "right")
+    if pos == "right":
+        return x1 + 0.1, y1 - 0.05, "left"
+    return (x0 + x1) / 2, y1 + 0.1, "center"
+
+
+_VAR = re.compile(r"\{(DESC|PART#?|LOC|TAG|XREF)\}", re.I)
+_VAR_LINE = {"DESC": "description", "PART": "part_label", "PART#": "part_label", "LOC": "tag", "TAG": "tag",
+             "XREF": "xref"}
+HEADER_GAP = 0.1                        # the distance the anchor is stored at (_header_anchor)
+LINE_PITCH = 1.65                       # line pitch of rich text, in text heights (matches how it is drawn)
+
+
+def header_values(block, ref, ctx):
+    """{line key: value} of the fields a header can show."""
+    return {"description": ctx.get("description", ""), "part_label": ctx.get("part", ""),
+            "tag": ref.tag, "xref": ctx.get("xref", "")}
+
+
+def header_markup(style, values, shown):
+    """The header's rich text for one part: the style's template with each variable replaced by its value. A
+    variable that is not shown (switched off in Part properties) or empty has no text; a line whose variables
+    are all empty is left out, so the header closes up. values {line key: text}, shown = set of line keys."""
+    from .richtext import escape
+    out = []
+    for line in style.template.split("\n"):
+        keys = [_VAR_LINE[v.upper()] for v in _VAR.findall(line)]
+        txt = {k: (values.get(k, "") if k in shown else "") for k in keys}
+        if keys and not any(txt.values()):
+            continue
+        out.append(_VAR.sub(lambda mt: escape(txt[_VAR_LINE[mt.group(1).upper()]]), line))
+    return "\n".join(out)
+
+
+def header_style_of(project, block):
+    return project.header_styles.get(block.header) or next(iter(project.header_styles.values()), None) \
+        or m.HeaderStyle("Standard")
+
+
+def _header_shown(block, ref):
+    hide = {k for k in ref.props.get("hide", "").split(",") if k}
+    return {k for k in block.header_lines.split(",") if k and k not in hide}
+
+
+def header_plain(project, block, ref, ctx):
+    """The header as plain text (DXF attribute)."""
+    from . import richtext
+    st = header_style_of(project, block)
+    return richtext.plain(header_markup(st, header_values(block, ref, ctx), _header_shown(block, ref)))
+
+
+def _resolve_header(project, block, ref, ctx, t, dx, dy):
+    """Fill the placed part's {header} text: styled rich text, compacted, anchored so it grows away from the part."""
+    from . import richtext
+    st = header_style_of(project, block)
+    mk = header_markup(st, header_values(block, ref, ctx), _header_shown(block, ref))
+    t.resolved = mk
+    t.hidden = not richtext.plain(mk).strip()
+    t.rich, t.height = True, st.height
+    t.spacing = st.spacing
+    if st.font:
+        t.font = st.font
+    if st.align != "auto":
+        t.align = st.align
+    lines = richtext.parse(mk)
+    grow = sum(LINE_PITCH * st.height * st.spacing * max((r.size for r in ln), default=1.0) for ln in lines[1:])
+    if block.label_pos in ("above", "bottomleft", "bottomright"):
+        t.y += grow
+    elif block.label_pos == "center":
+        t.y += grow / 2
+    g = st.gap - HEADER_GAP                    # the anchor was stored 0.1 in from the part; the style sets the rest
+    pos = block.label_pos
+    if pos in ("above", "bottomleft", "bottomright"):
+        t.y += g
+    elif pos in ("topleft", "topright"):
+        t.y -= g
+    if pos in ("right", "topleft", "bottomleft"):
+        t.x += g
+    elif pos in ("topright", "bottomright"):
+        t.x -= g
+    t.x += dx
+    t.y += dy
 
 
 def make_block(name, entities, base, label_lines=(), label_pos="above", **data) -> m.BlockDef:
@@ -325,7 +438,7 @@ def block_from_sheet(old: m.BlockDef, sheet: m.Sheet) -> m.BlockDef:
                      hyperlink=old.hyperlink, tag_prefix=old.tag_prefix, increment=old.increment,
                      prefix_rule=old.prefix_rule, connector=old.connector, exclude_bom=old.exclude_bom,
                      fp_w=old.fp_w, fp_h=old.fp_h, fp_d=old.fp_d, mount=old.mount, rail_cl=old.rail_cl, folder=old.folder, data=dict(old.data),
-                     poles=old.poles if same else None)
+                     poles=old.poles if same else None, header=old.header)
     for n, o in zip(new.slots, old.slots):                       # keep where the wire number prints
         n.num_dx, n.num_dy = o.num_dx, o.num_dy
     return new

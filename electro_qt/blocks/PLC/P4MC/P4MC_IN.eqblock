@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<block name="P4MC_IN" description="P4MC - Inputs" part_number="" tag_prefix="" hyperlink="" manufacturer="" increment="0" connector="0" prefix_rule="" poles="1" label_pos="above" folder="PLC/P4MC" terminal_text_editable="0">
+<block name="P4MC_IN" description="P4MC - Inputs" part_number="" tag_prefix="" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" fp_w="0.0" fp_h="0.0" fp_d="0.0" mount="" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="PLC/P4MC" terminal_text_editable="0" header="Standard" header_lines="description">
   <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <entities>
     <line x1="-4.2" y1="4.2" x2="-4.1125" y2="4.2" id="e637e5d6-5ed7-453c-9552-1dc8d4663c46" layer="0" />
@@ -509,8 +509,8 @@
     <line x1="-4.2" y1="-3.85" x2="-4.1125" y2="-3.85" id="07b10b97-c613-46ae-a74e-776f5f30ae01" layer="0" />
     <line x1="-4.2" y1="-4.2" x2="-4.1125" y2="-4.2" id="3a6fccb9-fe9e-45e5-9b5c-21283a7c8a13" layer="0" />
     <line x1="4.2" y1="1.575" x2="3.2375" y2="1.575" id="7959b9c9-49bd-4543-b0f9-f2a6ed635ed2" layer="0" />
-    <text x="0.0" y="4.685348286" height="0.1" rotation="0.0" id="70341dca-2d36-4938-b872-efbccef436d3" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{description}</source>
+    <text x="0.0" y="4.685348286" height="0.1" rotation="0.0" id="d2e5a7bc-6063-460f-b738-d756050cc49b" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{header}</source>
     </text>
   </entities>
 </block>

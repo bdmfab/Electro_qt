@@ -459,7 +459,7 @@ class TextItem(_Common, QGraphicsPathItem):
         for runs in richtext.parse(txt):
             pieces, w = [], 0.0
             for r in runs:
-                f = QFont(fam); f.setPixelSize(max(1, int(round(100 * r.size))))
+                f = QFont(r.font or fam); f.setPixelSize(max(1, int(round(100 * r.size))))
                 f.setBold(r.bold); f.setItalic(r.italic)
                 adv = QFontMetricsF(f).horizontalAdvance(r.text)
                 pieces.append((r, f, adv)); w += adv
@@ -469,7 +469,7 @@ class TextItem(_Common, QGraphicsPathItem):
         parts, total, y = [], QPainterPath(), 0.0
         for li, (pieces, big) in enumerate(layout):
             if li:
-                y += base_fm.lineSpacing() * big
+                y += base_fm.lineSpacing() * big * getattr(e, "spacing", 1.0)
             x = {"center": (width - widths[li]) / 2, "right": width - widths[li]}.get(e.align, 0.0)
             for r, f, adv in pieces:
                 p = QPainterPath(); p.addText(x, y, f, r.text)

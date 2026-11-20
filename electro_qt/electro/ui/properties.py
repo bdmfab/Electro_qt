@@ -21,20 +21,18 @@ class PropertiesPanel(QDockWidget):
         w = QWidget(); self.form = QFormLayout(w)
         self.info = QLabel("Nothing selected")
         self.layer = QComboBox(); self.color = QComboBox(); self.weight = QComboBox()
-        self.tstyle = QComboBox()
         self.part_btn = QPushButton("Part properties...")
         self.part_btn.clicked.connect(self._part)
         self.tag = QLineEdit(); self.tag.setPlaceholderText("(blocks only)")
         self.radius = QDoubleSpinBox(); self.radius.setDecimals(3); self.radius.setRange(0.01, 999.0)
         self.radius.setSingleStep(0.05); self.radius.setSuffix(" in")
         for label, wd in (("", self.info), ("Layer", self.layer), ("Color", self.color),
-                          ("Line weight", self.weight), ("Text style", self.tstyle),
+                          ("Line weight", self.weight),
                           ("Radius", self.radius), ("Device tag", self.tag), ("", self.part_btn)):
             self.form.addRow(label, wd) if label else self.form.addRow(wd)
         self.layer.activated.connect(self._layer)
         self.color.activated.connect(self._color)
         self.weight.activated.connect(self._weight)
-        self.tstyle.activated.connect(self._tstyle)
         self.radius.editingFinished.connect(self._radius)
         self.tag.editingFinished.connect(self._tag)
         self.setWidget(w)
@@ -90,7 +88,6 @@ class PropertiesPanel(QDockWidget):
                 wd.setEnabled(enabled)
             texts = [e for e in ents if isinstance(e, m.Text)]
             circles = [e for e in ents if isinstance(e, m.Circle)]
-            self.tstyle.setEnabled(bool(texts))
             self.radius.setEnabled(bool(circles))
             refs = [e for e in ents if isinstance(e, m.BlockRef)]
             self.tag.setEnabled(len(refs) == 1)
@@ -116,12 +113,6 @@ class PropertiesPanel(QDockWidget):
             ws = [(None, "By layer" if w == 0 else f"{w:g} mm", w) for w in LINEWEIGHTS]
             wset = {e.style.width for e in ents}
             self._set(self.weight, ws, next(iter(wset)), len(wset) > 1)
-            if texts:
-                names = [(None, n, n) for n in sc.project.text_styles]
-                used = {e.tstyle for e in texts}
-                self._set(self.tstyle, names, next(iter(used)), len(used) > 1)
-            else:
-                self.tstyle.clear()
             if circles:
                 self.radius.setValue(circles[0].r)
         finally:
@@ -142,11 +133,6 @@ class PropertiesPanel(QDockWidget):
         d = self.weight.currentData()
         if not self._busy and d != VARIES and self.scene:
             self.scene.apply_props(weight=d)
-
-    def _tstyle(self, _):
-        d = self.tstyle.currentData()
-        if not self._busy and d != VARIES and self.scene:
-            self.scene.apply_props(tstyle=d)
 
     def _part(self):
         refs = [e for e in self.scene.selected_entities() if isinstance(e, m.BlockRef)] if self.scene else []

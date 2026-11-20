@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<block name="ESS17-04" description="DESC" part_number="ESS17-04" tag_prefix="MOT" hyperlink="" manufacturer="Stepper Online" increment="0" connector="0" prefix_rule="" poles="1" label_pos="above" folder="Motors" terminal_text_editable="0">
+<block name="ESS17-04" description="DESC" part_number="ESS17-04" tag_prefix="MOT" hyperlink="" manufacturer="Stepper Online" increment="0" connector="0" exclude_bom="0" fp_w="0.0" fp_h="0.0" fp_d="0.0" mount="" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="Motors" terminal_text_editable="0" header="Standard" header_lines="description,part_label,tag">
   <blocklayer name="VISIBLE" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <blocklayer name="TANGENT_LINES" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
@@ -517,14 +517,8 @@
     <line x1="3.425" y1="-0.86286146" x2="3.067592726" y2="-0.86286146" id="e2113cf8-7082-4470-8c51-d83c13f41919" layer="0" color="8" width="1.4" />
     <arc cx="3.4250000000000007" cy="-1.0628614595518124" r="0.2" start="0.0" end="90.0" id="a37b2583-fac4-4d4a-83c9-4673bb862ecf" layer="0" color="8" width="1.4" />
     <arc cx="3.4250000000000007" cy="-2.25" r="0.2" start="270.0" end="0.0" id="5b3d6bff-0e04-414d-8c93-0f4ab8d805c4" layer="0" color="8" width="1.4" />
-    <text x="1.8125000000000004" y="0.25643693991201943" height="0.1" rotation="0.0" id="9a7b9326-f419-47f0-ac5e-279a4e242d6c" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{tag}</source>
-    </text>
-    <text x="1.8125000000000004" y="0.41643693991201947" height="0.1" rotation="0.0" id="e40e3751-e0bd-423f-b490-ab43cc8c1a78" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{part_label}</source>
-    </text>
-    <text x="1.8125000000000004" y="0.5764369399120195" height="0.1" rotation="0.0" id="5a8585eb-a1b9-42e3-9c66-1609eb14b7b9" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{description}</source>
+    <text x="1.8125000000000004" y="0.25643693991201943" height="0.1" rotation="0.0" id="dc271a61-5572-462f-bf7b-c485a47a8bf3" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{header}</source>
     </text>
   </entities>
 </block>

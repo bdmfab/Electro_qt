@@ -47,8 +47,9 @@ from PySide6.QtWidgets import QTextEdit, QToolButton, QHBoxLayout, QLabel
 from .. import richtext
 
 BASE_PT = 12.0
-SIZES = [6, 8, 10, 12, 14, 18, 24, 36]
+SIZES = [5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 24, 28, 36]
 COLOR_PROP = 0x100001          # QTextFormat user property holding the palette index
+FONT_PROP = 0x100002           # ... and the font family of a run ("" = the text's own font)
 
 
 def _fmt(run) -> QTextCharFormat:
@@ -60,6 +61,9 @@ def _fmt(run) -> QTextCharFormat:
     if run.color:
         f.setProperty(COLOR_PROP, int(run.color))
         f.setForeground(QBrush(aci_color(run.color)))
+    if run.font:
+        f.setProperty(FONT_PROP, run.font)
+        f.setFontFamilies([run.font])
     return f
 
 
@@ -86,6 +90,7 @@ def document_to_lines(edit: QTextEdit):
             if fr.isValid():
                 f = fr.charFormat()
                 col = f.property(COLOR_PROP)
+                fam = f.property(FONT_PROP)
                 for k, part in enumerate(fr.text().replace(" ", "\n").split("\n")):
                     if k:
                         lines.append(runs); runs = []
@@ -93,7 +98,7 @@ def document_to_lines(edit: QTextEdit):
                         runs.append(richtext.Run(
                             part, f.fontWeight() >= 600, f.fontItalic(), f.fontUnderline(),
                             round((f.fontPointSize() or BASE_PT) / BASE_PT, 3),
-                            int(col) if isinstance(col, int) else None))
+                            int(col) if isinstance(col, int) else None, fam if isinstance(fam, str) else ""))
             it += 1
         lines.append(runs)
         blk = blk.next()
@@ -103,7 +108,7 @@ def document_to_lines(edit: QTextEdit):
 class RichTextDialog(QDialog):
     """Multi-line text with bold / italic / underline, size and colour per selection."""
 
-    def __init__(self, parent, markup="", rich=False, title="Text", align="left"):
+    def __init__(self, parent, markup="", rich=False, title="Text", align="left", hint=None):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.resize(520, 320)
@@ -138,12 +143,20 @@ class RichTextDialog(QDialog):
         fill_color_combo(self.color, None)
         self.color.setItemText(0, "Default")
         self.color.activated.connect(self._color)
+        from PySide6.QtGui import QFontDatabase
+        self.font_pick = QComboBox()
+        self.font_pick.addItem("(text font)", "")
+        for fam in QFontDatabase.families():
+            self.font_pick.addItem(fam, fam)
+        self.font_pick.setMaximumWidth(150)
+        self.font_pick.activated.connect(self._font)
         bar = QHBoxLayout()
         for w in (self.b_bold, self.b_it, self.b_ul, QLabel("Size"), self.size, QLabel("Color"), self.color,
+                  QLabel("Font"), self.font_pick,
                   QLabel("Justify"), *self.b_align.values()):
             bar.addWidget(w)
         bar.addStretch(1)
-        hint = QLabel("Size is relative to the text height (12 pt = normal). Field codes such as {page} work.")
+        hint = QLabel(hint or "Size is relative to the text height (12 pt = normal). Field codes such as {page} work.")
         hint.setStyleSheet("color:gray")
         bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         bb.accepted.connect(self.accept); bb.rejected.connect(self.reject)
@@ -183,6 +196,14 @@ class RichTextDialog(QDialog):
             f.setProperty(COLOR_PROP, 0); f.setForeground(QBrush(self.edit.palette().text().color()))
         self._merge(f)
 
+    def _font(self, _):
+        fam = self.font_pick.currentData()
+        f = QTextCharFormat()
+        f.setProperty(FONT_PROP, fam)
+        if fam:
+            f.setFontFamilies([fam])
+        self._merge(f)
+
     def _sync(self, f):
         self.b_bold.setChecked(f.fontWeight() >= 600)
         self.b_it.setChecked(f.fontItalic()); self.b_ul.setChecked(f.fontUnderline())
@@ -190,6 +211,10 @@ class RichTextDialog(QDialog):
         self.size.blockSignals(True)
         i = min(range(len(SIZES)), key=lambda k: abs(SIZES[k] - pt))
         self.size.setCurrentIndex(i); self.size.blockSignals(False)
+        fam = f.property(FONT_PROP)
+        self.font_pick.blockSignals(True)
+        self.font_pick.setCurrentIndex(max(0, self.font_pick.findData(fam if isinstance(fam, str) else "")))
+        self.font_pick.blockSignals(False)
         col = f.property(COLOR_PROP)
         self.color.blockSignals(True)
         self.color.setCurrentIndex(max(0, self.color.findData(int(col)) if isinstance(col, int) and col else 0))
@@ -198,7 +223,7 @@ class RichTextDialog(QDialog):
     def result_markup(self):
         """-> (source, rich). Plain text stays plain (rich=False)."""
         lines = document_to_lines(self.edit)
-        if all(not (r.bold or r.italic or r.underline or abs(r.size - 1) > 1e-3 or r.color)
+        if all(not (r.bold or r.italic or r.underline or abs(r.size - 1) > 1e-3 or r.color or r.font)
                for ln in lines for r in ln):
             return "\n".join("".join(r.text for r in ln) for ln in lines), False
         return richtext.dumps(lines), True

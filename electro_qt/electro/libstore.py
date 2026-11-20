@@ -18,8 +18,9 @@ EXT = ".eqblock"
 
 
 def default_root() -> Path:
-    """'blocks' next to run_electro.py (the folder that holds the electro package)."""
-    return Path(__file__).resolve().parent.parent / "blocks"
+    """'blocks' next to run_electro.py; in a packaged build, 'blocks' in the user's data folder (paths.py)."""
+    from . import paths
+    return paths.default_library()
 
 
 def safe_name(name: str) -> str:

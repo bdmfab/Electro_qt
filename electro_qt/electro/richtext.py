@@ -4,6 +4,7 @@ with a few inline tags:
     <b>..</b> bold   <i>..</i> italic   <u>..</u> underline
     <size=1.5>..</size>   size as a multiple of the text height
     <color=1>..</color>   colour as an index of the colour palette (1 red ... 11 orange)
+    <font=Ubuntu>..</font>   font family for that run
 
 A literal < > & is written &lt; &gt; &amp;. Field codes such as {page} work inside the markup
 (they are replaced before the markup is read)."""
@@ -11,7 +12,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-_TAG = re.compile(r"<(/?)(b|i|u|size|color)(?:=([^>]*))?>")
+_TAG = re.compile(r"<(/?)(b|i|u|size|color|font)(?:=([^>]*))?>")
 
 
 @dataclass
@@ -22,6 +23,7 @@ class Run:
     underline: bool = False
     size: float = 1.0
     color: int = None
+    font: str = ""
 
 
 def escape(s: str) -> str:
@@ -36,7 +38,7 @@ def parse(markup: str):
     """-> [[Run, ...], ...] one list of runs per line."""
     lines = [[]]
     b = i = u = 0
-    sizes, colors = [], []
+    sizes, colors, fonts = [], [], []
     pos = 0
 
     def add(text):
@@ -45,7 +47,7 @@ def parse(markup: str):
                 lines.append([])
             if part:
                 lines[-1].append(Run(unescape(part), b > 0, i > 0, u > 0, sizes[-1] if sizes else 1.0,
-                                     colors[-1] if colors else None))
+                                     colors[-1] if colors else None, fonts[-1] if fonts else ""))
 
     for mt in _TAG.finditer(markup):
         add(markup[pos:mt.start()])
@@ -66,6 +68,12 @@ def parse(markup: str):
                     sizes.append(min(max(float(arg), 0.1), 20.0))
                 except (TypeError, ValueError):
                     sizes.append(1.0)
+        elif name == "font":
+            if closing:
+                if fonts:
+                    fonts.pop()
+            else:
+                fonts.append((arg or "").strip())
         else:
             if closing:
                 if colors:
@@ -101,6 +109,8 @@ def dumps(lines) -> str:
                 t = f"<size={r.size:g}>{t}</size>"
             if r.color is not None:
                 t = f"<color={r.color}>{t}</color>"
+            if r.font:
+                t = f"<font={r.font}>{t}</font>"
             s += t
         out.append(s)
     return "\n".join(out)

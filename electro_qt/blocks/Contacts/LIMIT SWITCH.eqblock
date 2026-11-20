@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<block name="LIMIT SWITCH" description="DESC" part_number="" tag_prefix="LS" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" prefix_rule="" poles="1" label_pos="above" folder="Contacts" terminal_text_editable="0">
+<block name="LIMIT SWITCH" description="DESC" part_number="" tag_prefix="LS" hyperlink="" manufacturer="" increment="0" connector="0" exclude_bom="0" fp_w="0.0" fp_h="0.0" fp_d="0.0" mount="" rail_cl="0.0" prefix_rule="" poles="1" label_pos="above" folder="Contacts" terminal_text_editable="0" header="on_wire" header_lines="description,part_label,tag,xref">
   <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <entities>
     <line x1="0.0" y1="0.0" x2="0.0875" y2="0.0" id="644f20d4-e0c1-4ca3-b274-292f8bf492d4" layer="0" />
@@ -7,14 +7,8 @@
     <line x1="0.0875" y1="0.0" x2="0.268688332" y2="0.040492878" id="24a7df01-9bbb-4d58-a376-a28b39936054" layer="0" />
     <line x1="0.237337856" y1="0.033486516" x2="0.243226808" y2="0.012454543" id="c6477592-fa64-47f7-a169-ffacaff5580b" layer="0" />
     <line x1="0.243226808" y1="0.012454543" x2="0.114613186" y2="0.006059391" id="722ddab7-2d38-4789-8d09-e5a201da01fd" layer="0" />
-    <text x="0.175" y="0.14049287800000002" height="0.1" rotation="0.0" id="5095a239-611f-4901-bc2f-bd472d190b4c" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{tag}</source>
-    </text>
-    <text x="0.175" y="0.300492878" height="0.1" rotation="0.0" id="78aa8ac3-6cab-4807-b3f0-a0ddd68fadee" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{part_label}</source>
-    </text>
-    <text x="0.175" y="0.46049287800000005" height="0.1" rotation="0.0" id="a0acaf0a-778d-4809-afbe-d4bca7dcef56" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{description}</source>
+    <text x="0.175" y="0.14049287800000002" height="0.1" rotation="0.0" id="68bf197f-7516-406a-96c6-27f186763171" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{header}</source>
     </text>
   </entities>
   <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />

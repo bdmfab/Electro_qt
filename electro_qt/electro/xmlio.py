@@ -184,6 +184,9 @@ def block_to_xml(b: m.BlockDef) -> ET.Element:
                     fp_w=_fmt(b.fp_w), fp_h=_fmt(b.fp_h), fp_d=_fmt(b.fp_d), mount=b.mount, rail_cl=_fmt(b.rail_cl), prefix_rule=b.prefix_rule,
                     poles=str(b.poles), label_pos=b.label_pos, folder=b.folder,
                     terminal_text_editable=_fmt(b.terminal_text_editable))
+    if b.header:
+        el.set("header", b.header)
+        el.set("header_lines", b.header_lines)
     for k, v in b.data.items():
         ET.SubElement(el, "data", name=k, value=str(v))
     for l in b.layers.values():
@@ -206,7 +209,8 @@ def block_from_xml(el: ET.Element) -> m.BlockDef:
                    mount=el.get("mount", ""), rail_cl=float(el.get("rail_cl", "0")),
                    prefix_rule=el.get("prefix_rule", ""),
                    poles=int(el.get("poles", "1")), label_pos=el.get("label_pos", "right"), folder=el.get("folder", ""),
-                   terminal_text_editable=el.get("terminal_text_editable") == "1")
+                   terminal_text_editable=el.get("terminal_text_editable") == "1",
+                   header=el.get("header", ""), header_lines=el.get("header_lines", ""))
     for d in el.findall("data"):
         b.data[d.get("name")] = d.get("value")
     for l in el.findall("blocklayer"):
@@ -253,6 +257,11 @@ def save_project(p: m.Project, path) -> None:
         if ts.color is not None:
             a["color"] = str(ts.color)
         ET.SubElement(tst, "text_style", **a)
+    hs = ET.SubElement(root, "header_styles")
+    for h in p.header_styles.values():
+        e = ET.SubElement(hs, "header_style", name=h.name, font=h.font, height=_fmt(h.height), align=h.align,
+                          spacing=_fmt(h.spacing), gap=_fmt(h.gap))
+        ET.SubElement(e, "template").text = h.template
     pre = ET.SubElement(root, "multiline_presets")
     for mp in p.multiline_presets.values():
         pe = ET.SubElement(pre, "preset", name=mp.name, spacing=_fmt(mp.spacing))
@@ -301,6 +310,17 @@ def load_project(path) -> m.Project:
         bf = root.find("block_folders")
         if bf is not None:
             p.block_folders = [f.get("path") for f in bf]
+        hs = root.find("header_styles")
+        if hs is not None:
+            p.header_styles = {}
+            for h in hs:
+                t = h.find("template")
+                p.header_styles[h.get("name")] = m.HeaderStyle(
+                    h.get("name"), t.text if t is not None and t.text else "", float(h.get("height", "0.1")),
+                    h.get("font", ""), h.get("align", "auto"), float(h.get("spacing", "1")),
+                    float(h.get("gap", "0.1")))
+        if not p.header_styles:
+            p.header_styles = m.default_header_styles()
         tst = root.find("text_styles")
         if tst is not None:
             p.text_styles = {t.get("name"): m.TextStyle(

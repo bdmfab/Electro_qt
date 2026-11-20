@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "electro-qt"
+dynamic = ["version"]
+description = "2D CAD for industrial electrical schematics and panel layouts"
+requires-python = ">=3.10"
+dependencies = ["PySide6>=6.6", "ezdxf>=1.1", "pypdf>=4.0"]
+
+[project.gui-scripts]
+electro-qt = "electro.ui.main:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "electro.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["electro*"]
+
+[tool.setuptools.package-data]
+"electro.ui" = ["resources/*"]

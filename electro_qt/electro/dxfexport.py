@@ -14,7 +14,8 @@ from .geometry import leaves
 from .templates import display_frame
 
 LINEWEIGHTS = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211]
-LABEL_ATTR = {"{description}": "DESCRIPTION", "{part_label}": "PART_LABEL", "{tag}": "TAG", "{xref}": "XREF"}
+LABEL_ATTR = {"{description}": "DESCRIPTION", "{part_label}": "PART_LABEL", "{tag}": "TAG", "{xref}": "XREF",
+              "{header}": "HEADER"}
 HALIGN = {"left": 0, "center": 1, "right": 2}
 ATTACH = {"left": 1, "center": 2, "right": 3}
 _BAD = re.compile(r'[<>/\\":;?*|=`,\n\r]')
@@ -53,8 +54,8 @@ def mtext_markup(text: str, rich: bool, font: str = "") -> str:
         s = ""
         for r in runs:
             codes = ""
-            if r.bold or r.italic:
-                codes += f"\\f{fam}|b{int(r.bold)}|i{int(r.italic)};"
+            if r.bold or r.italic or r.font:
+                codes += f"\\f{(r.font or fam).replace('|', '')}|b{int(r.bold)}|i{int(r.italic)};"
             if r.color:
                 codes += f"\\C{int(r.color)};"
             if abs(r.size - 1.0) > 1e-6:
@@ -84,6 +85,8 @@ def ref_attributes(project, sheet, blk: m.BlockDef, ref: m.BlockRef):
             tag = LABEL_ATTR[t.source]
             code = t.source[1:-1]
             val = "" if t.source in hidden else ctx.get(code, "")
+            if t.source == "{header}":
+                val = bk.header_plain(project, blk, ref, ctx)
             wx, wy = bk._to_world((t.x, t.y), ref)
             ox, oy = bk.label_offset(ref)
             out.append((tag, val, (wx + ox, wy + oy), t.height, t.align, True))

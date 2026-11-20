@@ -202,7 +202,6 @@ class MainWindow(QMainWindow):
         sc.show_grid = self.act_grid.isChecked()
         sc.current_layer = self.layer_box.currentData() or "0"
         sc.preset_name = self.preset_box.currentData()
-        sc.text_style_name = self.tstyle_box.currentData() or "Default"
         if sc.bg.name() != QColor(self.bg_color).name():
             sc.set_background(self.bg_color)
         sc.update()
@@ -338,6 +337,7 @@ class MainWindow(QMainWindow):
         bm.addAction(self._act("Custom...", self.on_custom_bg))
 
         hm = self.menuBar().addMenu("&Help")
+        hm.addAction(self._act("&User manual (PDF)", self.on_manual, "F1"))
         hm.addAction(self._act("&About Electro_qt", self.on_about))
 
         # ---- first toolbar: tools and snaps
@@ -389,16 +389,10 @@ class MainWindow(QMainWindow):
         tb2.addWidget(self.preset_box)
         tb2.addSeparator()
 
-        tb2.addAction(self._act("Styles...", self.on_text_styles))
-        self.tstyle_box = QComboBox(); self.tstyle_box.setToolTip("Style for new text")
-        self.tstyle_box.setMinimumWidth(STYLES_BOX_W)
-        self.tstyle_box.setMaximumWidth(STYLES_BOX_W)
-        self.tstyle_box.currentIndexChanged.connect(self._ui_changed)
-        tb2.addWidget(self.tstyle_box)
+        tb2.addAction(self._act("Header styles...", self.on_header_styles))
 
         self.refresh_layers()
         self.refresh_presets()
-        self.refresh_text_styles()
         self._refresh_library()
         try:
             saved = QSettings("Electro_qt", "Electro_qt").value("background")
@@ -436,6 +430,18 @@ class MainWindow(QMainWindow):
                 QSettings("Electro_qt", "Electro_qt").setValue("background", self.bg_color)
             except Exception:    # noqa: BLE001
                 pass
+
+    def on_manual(self):
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        from .. import paths
+        p = paths.manual_path()
+        if p is None:
+            QMessageBox.information(self, "User manual", "The manual (docs/Electro_qt_Manual.pdf) was not found "
+                                    "next to the program.")
+            return
+        if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(p))):
+            QMessageBox.information(self, "User manual", f"Could not open the PDF viewer. The file is:\n{p}")
 
     def on_about(self):
         QMessageBox.about(self, "About Electro_qt",
@@ -494,35 +500,31 @@ class MainWindow(QMainWindow):
         sc.undo.push(LayerStateCmd(sc, before, after))
         self.view.setFocus()
 
-    def refresh_text_styles(self):
-        cur = self.tstyle_box.currentData()
-        self.tstyle_box.blockSignals(True)
-        self.tstyle_box.clear()
-        for name in self.project.text_styles:
-            self.tstyle_box.addItem(name, name)
-        self.tstyle_box.setCurrentIndex(max(0, self.tstyle_box.findData(cur)))
-        self.tstyle_box.blockSignals(False)
-        self._sync()
-        self.props.refresh()
-
-    def on_text_styles(self):
-        from .styledlg import TextStylesDialog
-        old = {k: (v.font, v.height, v.color, v.align) for k, v in self.project.text_styles.items()}
-        dlg = TextStylesDialog(self, self.project.text_styles)
+    def on_header_styles(self):
+        """Header styles: how a part's label text looks. Parts name one in Part properties."""
+        from .headerdlg import HeaderStylesDialog
+        used = {b.header for b in self.project.blocks.values() if b.header}
+        dlg = HeaderStylesDialog(self, self.project.header_styles, used)
         if not dlg.exec():
             return
-        self.project.text_styles = dict(dlg.result_styles())
-        self.project.text_styles.setdefault("Default", m.TextStyle("Default"))
-        new = {k: (v.font, v.height, v.color, v.align) for k, v in self.project.text_styles.items()}
-        changed = {k for k in old if new.get(k) != old[k]}      # edited or deleted
-        if changed:
-            self.scene_.restyle_text(changed)
-            self._refresh_all()
-            for sc in self._scenes():        # earlier undo steps would restore stale text looks
-                sc.undo.clear()
-            self._extra_dirty = True
-            self._title()
-        self.refresh_text_styles()
+        self.project.header_styles = dict(dlg.result_styles())
+        ren = dlg.result_renames()
+        if ren:                                    # parts / library blocks follow a renamed style
+            for blk in self.project.blocks.values():
+                if blk.header in ren:
+                    blk.header = ren[blk.header]
+            for blk in list(self.store.blocks.values()):
+                if blk.header in ren:
+                    blk.header = ren[blk.header]
+                    try:
+                        self.store.save_block(blk)
+                    except OSError:
+                        pass
+        self._refresh_all()
+        for sc in self._scenes():                  # earlier undo steps would restore stale label looks
+            sc.undo.clear()
+        self._extra_dirty = True
+        self._title()
         self.view.setFocus()
 
     # ------------------------------------------------------------ blocks / shared library
@@ -607,7 +609,8 @@ class MainWindow(QMainWindow):
         keys = ("description", "part_number", "manufacturer", "hyperlink", "tag_prefix", "poles", "increment",
                 "prefix_rule", "connector", "exclude_bom", "fp_w", "fp_h", "fp_d", "mount", "rail_cl")
         same = all(getattr(blk, k) == v[k] for k in keys if k in v) \
-            and ("labels" not in v or (tuple(bk.label_lines_of(blk)) == tuple(v["labels"]) and blk.label_pos == v["label_pos"])) \
+            and ("labels" not in v or (tuple(bk.label_lines_of(blk)) == tuple(v["labels"]) and blk.label_pos == v["label_pos"]
+                                       and blk.header == v.get("header", blk.header))) \
             and ("folder" not in v or name not in self.store.blocks or blk.folder == v["folder"])
         if same:
             return
@@ -616,7 +619,7 @@ class MainWindow(QMainWindow):
             if k in v:
                 setattr(blk, k, v[k])
         if "labels" in v:
-            bk.rebuild_label(blk, v["labels"], v["label_pos"])
+            bk.rebuild_label(blk, v["labels"], v["label_pos"], v.get("header"))
         if name in self.store.blocks:
             blk.folder = v["folder"]
             try:

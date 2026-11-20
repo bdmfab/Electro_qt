@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<block name="2P Breaker" description="DESC" part_number="GMCBU-2B" tag_prefix="CB" hyperlink="" manufacturer="Gladiator" increment="1" connector="0" exclude_bom="0" fp_w="1.39" fp_h="4.13" fp_d="2.88" mount="rail" rail_cl="0.0" prefix_rule="" poles="2" label_pos="above" folder="Circuit Protection" terminal_text_editable="0">
+<block name="2P Breaker" description="DESC" part_number="GMCBU-2B" tag_prefix="CB" hyperlink="" manufacturer="Gladiator" increment="1" connector="0" exclude_bom="0" fp_w="1.39" fp_h="4.13" fp_d="2.88" mount="" rail_cl="0.0" prefix_rule="" poles="2" label_pos="above" folder="Circuit Protection" terminal_text_editable="0" header="on_wire" header_lines="description,part_label,tag">
   <blocklayer name="0" color="7" kind="graphics" numbered="0" scheme="" linetype="continuous" lineweight="0.0" phase="" />
   <blocklayer name="Dashed" color="7" kind="graphics" numbered="0" scheme="" linetype="dashed" lineweight="0.0" phase="" />
   <entities>
@@ -10,14 +10,8 @@
     <arc cx="0.17499999999999982" cy="-0.22567468095098597" r="0.34999999999999964" start="60.000000000000036" end="119.99999999999997" id="a5d53e93-0ee3-4107-9aca-6eb343dcaf47" layer="0" />
     <arc cx="0.17499999999999982" cy="-0.5756746809509856" r="0.34999999999999964" start="60.000000000000036" end="119.99999999999997" id="d952ee03-6230-4fa4-890e-4256eac104ba" layer="0" />
     <line x1="0.175" y1="0.124325319" x2="0.175" y2="-0.225674681" id="44d17ff3-1ae2-449f-a66c-4e6a3d6e1271" layer="Dashed" />
-    <text x="0.175" y="0.22432531904901368" height="0.1" rotation="0.0" id="9894ded0-b674-49f6-bfb2-6373b9fb04f0" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{tag}</source>
-    </text>
-    <text x="0.175" y="0.3843253190490137" height="0.1" rotation="0.0" id="800e6cbc-df5b-4228-9ac6-47e48f04611a" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{part_label}</source>
-    </text>
-    <text x="0.175" y="0.5443253190490137" height="0.1" rotation="0.0" id="db067ea6-08d2-452f-b48e-9a05454226e4" align="center" tstyle="Default" rich="0" layer="0">
-      <source>{description}</source>
+    <text x="0.175" y="0.22432531904901368" height="0.1" rotation="0.0" id="c0928d3b-0743-4d58-b4ef-00bd2e03ae72" align="center" tstyle="Default" rich="0" layer="0">
+      <source>{header}</source>
     </text>
   </entities>
   <slot terminal="1" x="0.0" y="0.0" num_dx="0.0" num_dy="0.0" />

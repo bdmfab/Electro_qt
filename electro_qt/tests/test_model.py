@@ -1648,3 +1648,71 @@ def test_dim_attachment_roundtrip(tmp_path):
     q = xmlio.load_project(f)
     dd = [x for x in q.sheets[2].entities if isinstance(x, m.Dim)]
     assert dd[0].a1 == d.a1 and dd[0].a2 == d.a2
+
+
+def _hdr_project():
+    from electro import blocks as bk
+    p = m.Project("t")
+    sh = p.add_sheet(m.Sheet(4, "P"))
+    ents = [m.Line(0, 0, 1, 0, m.Style("0")), m.Line(1, 0, 1, 1, m.Style("0")), m.SlotMark(0, 0, "1")]
+    blk = bk.make_block("LS", ents, (0, 0), ("description", "part_label", "tag"), "above", tag_prefix="LS")
+    p.blocks["LS"] = blk
+    p.header_styles["Big"] = m.HeaderStyle(
+        "Big", "<color=3><size=1.5>{DESC}</size></color>\n<color=4>{PART}</color>\n<size=0.8>{LOC}</size>", 0.1,
+        "Ubuntu", "auto", 1.2)
+    ref = m.BlockRef("LS", 3.0, 3.0, 0.0, False, style=m.Style("0")); ref.tag = "LS0415"
+    ref.props["description"] = "X HOME"
+    sh.entities.append(ref)
+    return p, sh, blk, ref
+
+
+def test_header_style_compacts_and_styles():
+    from electro import blocks as bk, richtext
+    p, sh, blk, ref = _hdr_project()
+    bk.rebuild_label(blk, ("description", "part_label", "tag"), "above", "Big")
+    assert blk.header == "Big" and bk.label_lines_of(blk) == ("description", "part_label", "tag")
+    t = [e for e in bk.resolved_entities(p, sh, blk, ref) if isinstance(e, m.Text)][0]
+    assert t.rich and t.font == "Ubuntu" and abs(t.height - 0.1) < 1e-9
+    assert richtext.plain(t.resolved) == "X HOME\nLS0415"             # no part number: that line is gone
+    assert "<color=3><size=1.5>X HOME</size></color>" in t.resolved
+    base = [e for e in bk.block_entities(blk, ref) if isinstance(e, m.Text)][0].y
+    assert t.y > base                                                  # grows upward from the bottom line
+    ref.props["hide"] = "tag"
+    t = [e for e in bk.resolved_entities(p, sh, blk, ref) if isinstance(e, m.Text)][0]
+    assert richtext.plain(t.resolved) == "X HOME"
+
+
+def test_header_roundtrip_and_font_tag(tmp_path):
+    from electro import xmlio, blocks as bk, richtext
+    p, sh, blk, ref = _hdr_project()
+    bk.rebuild_label(blk, ("description", "tag"), "right", "Big")
+    f = str(tmp_path / "h.eqt")
+    xmlio.save_project(p, f)
+    q = xmlio.load_project(f)
+    assert q.blocks["LS"].header == "Big" and q.blocks["LS"].header_lines == "description,tag"
+    assert q.header_styles["Big"].template == p.header_styles["Big"].template and q.header_styles["Big"].spacing == 1.2
+    runs = richtext.parse("<font=Ubuntu Mono>ab</font>c")
+    assert runs[0][0].font == "Ubuntu Mono" and runs[0][1].font == "" and richtext.dumps(runs) == "<font=Ubuntu Mono>ab</font>c"
+    assert bk.block_from_sheet(q.blocks["LS"], bk.edit_sheet(q.blocks["LS"])).header == "Big"
+
+
+def test_header_gap_moves_text_toward_part(tmp_path):
+    from electro import blocks as bk, xmlio
+    p, sh, blk, ref = _hdr_project()
+    bk.rebuild_label(blk, ("description", "tag"), "above", "Big")
+    y0 = [e for e in bk.resolved_entities(p, sh, blk, ref) if isinstance(e, m.Text)][0].y
+    p.header_styles["Big"].gap = 0.03
+    y1 = [e for e in bk.resolved_entities(p, sh, blk, ref) if isinstance(e, m.Text)][0].y
+    assert abs((y0 - y1) - 0.07) < 1e-9
+    f = str(tmp_path / "g.eqt"); xmlio.save_project(p, f)
+    assert abs(xmlio.load_project(f).header_styles["Big"].gap - 0.03) < 1e-9
+
+
+def test_header_gap_can_be_negative():
+    from electro import blocks as bk
+    p, sh, blk, ref = _hdr_project()
+    bk.rebuild_label(blk, ("description", "tag"), "above", "Big")
+    y0 = [e for e in bk.resolved_entities(p, sh, blk, ref) if isinstance(e, m.Text)][0].y
+    p.header_styles["Big"].gap = -0.05
+    y1 = [e for e in bk.resolved_entities(p, sh, blk, ref) if isinstance(e, m.Text)][0].y
+    assert abs((y0 - y1) - 0.15) < 1e-9
